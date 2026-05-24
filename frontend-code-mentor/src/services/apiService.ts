@@ -7,6 +7,12 @@ export interface Hint {
   severity: 'low' | 'medium' | 'high'
   line?: number
   timestamp: number
+  level?: string
+  detailLevel?: string
+  reason?: string
+  nextAction?: string
+  hintDepth?: number
+  studentLevel?: string
 }
 
 export interface ProgressData {
@@ -140,14 +146,22 @@ class ApiService {
       const showHint = analysisData && analysisData.showHint;
       const hintMsg = analysisData && analysisData.message;
       const level = (analysisData && analysisData.level) || 'medium';
+      const detailLevel = (analysisData && analysisData.detailLevel) || 'MEDIUM';
+      const severity = detailLevel === 'HIGH' ? 'high' : detailLevel === 'LOW' ? 'low' : 'medium';
 
       return {
         hints: (showHint && hintMsg) ? [{
           id: Date.now(),
           type: 'logic',
           message: hintMsg,
-          severity: level.toLowerCase() as any,
-          timestamp: Date.now()
+          severity: severity as any,
+          timestamp: Date.now(),
+          level,
+          detailLevel,
+          reason: analysisData.reason,
+          nextAction: analysisData.nextAction,
+          hintDepth: analysisData.hintDepth,
+          studentLevel: analysisData.studentLevel
         }] : [],
         score: 80,
         suggestions: [],

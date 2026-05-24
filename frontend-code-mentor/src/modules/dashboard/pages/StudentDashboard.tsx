@@ -250,7 +250,7 @@ export function StudentDashboard() {
       {/* SECTION 1: TOP SUMMARY STRIP */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 xl:gap-6">
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm flex items-center space-x-3">
-          <div className="p-2.5 bg-orange-50 dark:bg-orange-500/10 text-orange-500 rounded-xl">
+          <div className="p-2.5 bg-blue-50 dark:bg-blue-500/10 text-blue-500 rounded-xl">
             <BookOpen className="w-5 h-5" />
           </div>
           <div>
@@ -280,7 +280,7 @@ export function StudentDashboard() {
         </div>
 
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm flex items-center space-x-3">
-          <div className="p-2.5 bg-blue-50 dark:bg-blue-500/10 text-blue-500 rounded-xl">
+          <div className="p-2.5 bg-purple-50 dark:bg-purple-500/10 text-purple-500 rounded-xl">
             <Trophy className="w-5 h-5" />
           </div>
           <div>
@@ -315,15 +315,15 @@ export function StudentDashboard() {
               const solvedCount = a.problems?.filter((p: any) => p.completed).length || 0;
               const totalCount = a.problems?.length || 0;
               
-              // Border classes
               let borderClass = 'border-zinc-200 dark:border-zinc-800';
+              let accentClass = 'bg-zinc-300 dark:bg-zinc-700';
               let badgeColor = 'bg-zinc-100 text-zinc-550 dark:bg-zinc-800 dark:text-zinc-400';
               
               if (urgency === 'overdue') {
-                borderClass = 'border-red-500/40 dark:border-red-500/35 ring-1 ring-red-500/10';
+                accentClass = 'bg-red-500';
                 badgeColor = 'bg-red-50 text-red-650 dark:bg-red-950/25 dark:text-red-400';
               } else if (urgency === 'soon') {
-                borderClass = 'border-amber-500/40 dark:border-amber-500/35 ring-1 ring-amber-500/10';
+                accentClass = 'bg-amber-500';
                 badgeColor = 'bg-amber-50 text-amber-650 dark:bg-amber-950/25 dark:text-amber-400';
               }
 
@@ -333,7 +333,7 @@ export function StudentDashboard() {
                   className={`bg-white dark:bg-zinc-900 border ${borderClass} rounded-2xl p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between h-full relative overflow-hidden`}
                 >
                   {/* Visual Status Indicator strip */}
-                  <div className={`absolute top-0 left-0 w-full h-1 ${urgency === 'overdue' ? 'bg-red-500' : 'bg-amber-500'}`}></div>
+                  <div className={`absolute top-0 left-0 w-full h-1.5 ${accentClass}`}></div>
 
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-3">
@@ -368,7 +368,7 @@ export function StudentDashboard() {
                       </div>
                       <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden">
                         <div 
-                          className={`h-full rounded-full transition-all duration-300 ${urgency === 'overdue' ? 'bg-red-500' : 'bg-orange-500'}`}
+                          className={`h-full rounded-full transition-all duration-300 ${urgency === 'overdue' ? 'bg-red-500' : 'bg-amber-500'}`}
                           style={{ width: `${a.progress}%` }}
                         ></div>
                       </div>

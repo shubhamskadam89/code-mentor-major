@@ -25,4 +25,6 @@ public class ProblemTrackingRequest {
     private int hintsUsed;
 
     private boolean completed;
+
+    private boolean hintOnly;
 }

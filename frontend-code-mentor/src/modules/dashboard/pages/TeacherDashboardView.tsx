@@ -183,11 +183,11 @@ export function TeacherDashboardView() {
         >
           <div className="absolute top-0 left-0 w-full h-1 bg-orange-500"></div>
           <div>
-            <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Pending Alerts</div>
-            <div className="text-3xl font-black text-zinc-800 dark:text-white mt-2">{alerts.length}</div>
+            <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Need Help</div>
+            <div className="text-3xl font-black text-zinc-800 dark:text-white mt-2">{summary?.strugglingStudentsCount ?? 0}</div>
           </div>
           <div className="flex items-center justify-between mt-4">
-            <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider group-hover:text-orange-500 transition-colors">View Roster</span>
+            <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider group-hover:text-orange-500 transition-colors">Hint-heavy students</span>
             <Users className="w-5 h-5 text-orange-500 shrink-0 group-hover:scale-110 transition-transform" />
           </div>
         </div>

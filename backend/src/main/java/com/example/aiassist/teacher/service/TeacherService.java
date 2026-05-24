@@ -7,6 +7,8 @@ import com.example.aiassist.teacher.dto.TeacherRequestDTO;
 import com.example.aiassist.teacher.dto.TeacherResponseDTO;
 import com.example.aiassist.teacher.repository.TeacherRepository;
 import com.example.aiassist.classroom.entity.Classroom;
+import com.example.aiassist.problem.entity.ProblemAttempt;
+import com.example.aiassist.problem.repository.ProblemAttemptRepository;
 import com.example.aiassist.student.entity.StudentProfile;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -17,9 +19,13 @@ import java.util.*;
 public class TeacherService {
 
     private final TeacherRepository teacherRepository;
+    private final ProblemAttemptRepository problemAttemptRepository;
 
-    public TeacherService(TeacherRepository teacherRepository) {
+    public TeacherService(
+            TeacherRepository teacherRepository,
+            ProblemAttemptRepository problemAttemptRepository) {
         this.teacherRepository = teacherRepository;
+        this.problemAttemptRepository = problemAttemptRepository;
     }
 
     public TeacherResponseDTO createTeacher(TeacherRequestDTO request) {
@@ -84,9 +90,10 @@ public class TeacherService {
                 processedStudentIds.add(sp.getId());
 
                 Map<String, Object> map = new HashMap<>();
-                map.put("prn", String.format("0%02d", sp.getId() % 100));
+                map.put("prn", sp.getPrn());
                 map.put("name", sp.getName());
                 map.put("handle", sp.getHandle());
+                map.put("department", sp.getDepartment());
 
                 List<String> studentClassroomCodes = new ArrayList<>();
                 for (Classroom cl : teacher.getClassrooms()) {
@@ -105,6 +112,19 @@ public class TeacherService {
                 else if (sp.getHandle().equals("james_wilson")) rating = 3.8;
 
                 map.put("rating", rating);
+                List<ProblemAttempt> attempts = problemAttemptRepository.findByStudentProfileId(sp.getId());
+                int totalHintsUsed = attempts.stream().mapToInt(ProblemAttempt::getHintsUsed).sum();
+                long strugglingProblems = attempts.stream()
+                        .filter(a -> !a.isCompleted() && a.getHintsUsed() >= 3)
+                        .count();
+                long activeProblems = attempts.stream()
+                        .filter(a -> !a.isCompleted())
+                        .count();
+
+                map.put("totalHintsUsed", totalHintsUsed);
+                map.put("strugglingProblems", strugglingProblems);
+                map.put("activeProblems", activeProblems);
+                map.put("needsAttention", strugglingProblems > 0 || totalHintsUsed >= 5);
                 studentList.add(map);
             }
         }

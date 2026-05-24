@@ -34,9 +34,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const urlToken = params.get('token');
         const urlEmail = params.get('email');
         const urlRole = params.get('role');
+        const urlHandle = params.get('handle');
 
         if (urlToken && urlEmail) {
-          const handle = urlEmail.split('@')[0];
+          const handle = urlHandle && urlHandle.trim() ? urlHandle.trim() : urlEmail.split('@')[0];
           const role = (urlRole?.toLowerCase() || 'student') as 'student' | 'teacher';
           
           await setStorageItem('codementor_token', urlToken);
@@ -68,11 +69,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const storedRole = await getStorageItem('user_role');
         const storedToken = await getStorageItem('codementor_token');
 
-        if (storedHandle && storedEmail && storedRole && storedToken) {
+        if (storedEmail && storedRole && storedToken) {
+          let handle = storedHandle;
+          let email = storedEmail;
+          let role = storedRole as 'student' | 'teacher';
+
+          try {
+            const meResponse = await fetch('http://localhost:8080/api/auth/me', {
+              headers: { Authorization: `Bearer ${storedToken}` },
+              credentials: 'include',
+            });
+
+            if (meResponse.ok) {
+              const me = await meResponse.json();
+              const session = me?.data;
+              if (session?.handle) handle = session.handle;
+              if (session?.email) email = session.email;
+              if (session?.role) role = session.role.toLowerCase() as 'student' | 'teacher';
+
+              if (handle) await setStorageItem('codementor_handle', handle);
+              await setStorageItem('codementor_email', email);
+              await setStorageItem('user_role', role);
+            }
+          } catch (err) {
+            console.warn("Could not refresh session from backend; using stored auth.", err);
+          }
+
           setUser({
-            handle: storedHandle,
-            email: storedEmail,
-            role: storedRole as 'student' | 'teacher',
+            handle: handle || email.split('@')[0],
+            email,
+            role,
           });
           setToken(storedToken);
         }

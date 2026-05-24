@@ -8,7 +8,7 @@ import {
   fetchClassroomsByTeacherEmail, 
   Classroom 
 } from '../../../services/classroomService';
-import { Search, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Lightbulb, Search, RefreshCw } from 'lucide-react';
 
 export function TeacherStudents() {
   const { user } = useAuth();
@@ -35,8 +35,8 @@ export function TeacherStudents() {
         setStudents(roster);
         setClassrooms(classList);
       } catch (err: any) {
-        console.error("Error loading roster data:", err);
-        setError("Failed to retrieve student roster. Please check that the backend is running.");
+        console.error("Error loading student data:", err);
+        setError("Failed to retrieve students. Please check that the backend is running.");
       } finally {
         setLoading(false);
       }
@@ -74,13 +74,13 @@ export function TeacherStudents() {
     <div className="space-y-8">
       <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-4">
         <div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-white leading-tight">Student Roster</h1>
+          <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-white leading-tight">Students</h1>
           <p className="text-zinc-500 font-medium">Monitor enrolled student performance metrics across your classes.</p>
         </div>
         <button 
           onClick={() => setRefreshKey(prev => prev + 1)}
           className="p-2.5 bg-white dark:bg-zinc-850 hover:bg-zinc-50 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl transition"
-          title="Refresh roster"
+          title="Refresh students"
         >
           <RefreshCw className="w-4 h-4 text-zinc-500" />
         </button>
@@ -120,15 +120,17 @@ export function TeacherStudents() {
             <thead>
               <tr className="bg-zinc-50 dark:bg-zinc-850/30 text-xs uppercase tracking-widest text-zinc-500 border-b border-zinc-200 dark:border-zinc-800">
                 <th className="px-6 py-4 font-bold">Student Name</th>
-                <th className="px-6 py-4 font-bold text-center">PRN (Student ID)</th>
+                <th className="px-6 py-4 font-bold text-center">PRN</th>
                 <th className="px-6 py-4 font-bold">Department</th>
+                <th className="px-6 py-4 font-bold text-center">Hints</th>
+                <th className="px-6 py-4 font-bold text-center">Needs Help</th>
                 <th className="px-6 py-4 font-bold text-right">Rating</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
               {filteredStudents.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="text-center py-12 text-zinc-500 font-medium">
+                  <td colSpan={6} className="text-center py-12 text-zinc-500 font-medium">
                     No students found matching your criteria.
                   </td>
                 </tr>
@@ -151,6 +153,22 @@ export function TeacherStudents() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-zinc-650 dark:text-zinc-350">
                       {student.department || "Not filled"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-bold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/20 text-xs">
+                        <Lightbulb className="w-3 h-3" />
+                        {student.totalHintsUsed ?? 0}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      {(student.strugglingProblems ?? 0) > 0 || student.needsAttention ? (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-bold text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-500/20 text-xs">
+                          <AlertTriangle className="w-3 h-3" />
+                          {student.strugglingProblems ?? 0} problem{(student.strugglingProblems ?? 0) === 1 ? '' : 's'}
+                        </div>
+                      ) : (
+                        <span className="text-xs font-semibold text-zinc-400">Stable</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
                       <div className="inline-flex items-center px-2.5 py-0.5 rounded-full font-bold text-orange-700 dark:text-orange-400 bg-orange-100 dark:bg-orange-500/20 text-xs">

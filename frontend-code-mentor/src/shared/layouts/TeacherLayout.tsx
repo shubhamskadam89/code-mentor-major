@@ -15,7 +15,7 @@ export function TeacherLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(getInitialSidebarOpen);
 
   return (
-    <div className="flex bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white h-screen overflow-hidden font-sans selection:bg-orange-500/30">
+    <div className="cm-page-shell flex text-slate-900 dark:text-white h-screen overflow-hidden font-sans selection:bg-blue-500/30">
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
         <TopBar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />

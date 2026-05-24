@@ -77,12 +77,19 @@ class CodeCaptureService {
     this.observeSubmissions();
 
     // Listen for toggle and trigger messages
-    chrome.runtime.onMessage.addListener((msg) => {
+    chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       if (msg?.type === 'TOGGLE_EXTENSION') {
         this.enabled = !!msg.enabled
       } else if (msg?.type === 'TRIGGER_CAPTURE') {
         console.log('CONTENT SCRIPT: Received TRIGGER_CAPTURE');
-        this.captureSignal(true);
+        const captured = this.captureSignal(true);
+        sendResponse({
+          success: captured,
+          hasEditor: !!this.currentEditor,
+          codeLength: this.currentEditor?.getValue()?.length ?? 0,
+          url: this.getPageUrl(),
+          diagnostics: this.getEditorDiagnostics()
+        });
       } else if (msg?.type === 'HINT_UPDATE') {
         console.log('CONTENT SCRIPT: Received HINT_UPDATE');
         this.updateHints(msg.data);
@@ -231,11 +238,57 @@ class CodeCaptureService {
     console.log('Detected platform:', platform);
   }
 
+  private getPageUrl(): string {
+    try {
+      return window.top?.location.href || window.location.href;
+    } catch {
+      return document.referrer || window.location.href;
+    }
+  }
+
+  private getEditorDiagnostics(): Record<string, number> {
+    return {
+      monacoEditor: document.querySelectorAll('.monaco-editor').length,
+      monacoViewLines: document.querySelectorAll('.view-lines').length,
+      aceEditor: document.querySelectorAll('.ace_editor').length,
+      aceLines: document.querySelectorAll('.ace_line').length,
+      codeMirror5: document.querySelectorAll('.CodeMirror').length,
+      codeMirror6: document.querySelectorAll('.cm-content, .cm-editor').length,
+      textareas: document.querySelectorAll('textarea').length,
+      contentEditable: document.querySelectorAll('[contenteditable="true"]').length,
+      iframes: document.querySelectorAll('iframe').length
+    };
+  }
+
+  private getProblemKeyFromUrl(url: string): string {
+    try {
+      const parsed = new URL(url);
+      if (parsed.hostname.includes('leetcode.com')) {
+        const match = parsed.pathname.match(/\/problems\/([^/]+)/);
+        return match ? `leetcode_${match[1]}` : url;
+      }
+      if (parsed.hostname.includes('geeksforgeeks.org')) {
+        const match = parsed.pathname.match(/\/problems\/([^/]+)/);
+        return match ? match[1] : url;
+      }
+      return url;
+    } catch {
+      return url;
+    }
+  }
+
   private findCodeEditor(): void {
     // Try to find Monaco Editor (VS Code style)
     const monacoEditor = this.findMonacoEditor();
     if (monacoEditor) {
       this.setupMonacoEditor(monacoEditor);
+      return;
+    }
+
+    // Try to find Ace Editor (used by many coding portals, including GFG variants)
+    const aceEditor = this.findAceEditor();
+    if (aceEditor) {
+      this.setupAceEditor(aceEditor);
       return;
     }
 
@@ -253,7 +306,7 @@ class CodeCaptureService {
       return;
     }
 
-    console.log('No code editor found, retrying in 1 second...');
+    console.log('No code editor found, retrying in 1 second...', this.getEditorDiagnostics());
     setTimeout(() => this.findCodeEditor(), 1000);
   }
 
@@ -273,6 +326,23 @@ class CodeCaptureService {
     return null;
   }
 
+  private findAceEditor(): HTMLElement | null {
+    const aceEditor = document.querySelector('.ace_editor');
+    if (aceEditor) return aceEditor as HTMLElement;
+
+    const aceLine = document.querySelector('.ace_line');
+    if (aceLine) {
+      return (aceLine.closest('.ace_editor') || aceLine.closest('[class*="editor"]') || aceLine.parentElement) as HTMLElement | null;
+    }
+
+    const aceTextInput = document.querySelector('textarea.ace_text-input');
+    if (aceTextInput) {
+      return (aceTextInput.closest('.ace_editor') || aceTextInput.parentElement) as HTMLElement | null;
+    }
+
+    return null;
+  }
+
   private findCodeMirrorEditor(): HTMLElement | null {
     // CodeMirror 5
     const cm5 = document.querySelector('.CodeMirror');
@@ -282,9 +352,23 @@ class CodeCaptureService {
     const cm6 = document.querySelector('.cm-content');
     if (cm6) return cm6 as HTMLElement;
 
+    const cmEditor = document.querySelector('.cm-editor');
+    if (cmEditor) return cmEditor as HTMLElement;
+
     // Generic contenteditable (fallback)
     const generic = document.querySelector('[contenteditable="true"]');
-    if (generic && generic.closest('.editor-scrollable')) return generic as HTMLElement;
+    if (
+      generic &&
+      (
+        generic.closest('.editor-scrollable') ||
+        generic.closest('[class*="code"]') ||
+        generic.closest('[class*="editor"]') ||
+        generic.closest('[id*="code"]') ||
+        generic.closest('[id*="editor"]')
+      )
+    ) {
+      return generic as HTMLElement;
+    }
 
     return null;
   }
@@ -343,6 +427,35 @@ class CodeCaptureService {
 
     // We don't need setupEditorListeners anymore since we rely on polling
     console.log('Monaco editor setup complete');
+  }
+
+  private setupAceEditor(element: HTMLElement): void {
+    console.log('Setting up Ace editor (DOM Scraping Mode)');
+
+    this.currentEditor = {
+      element,
+      getValue: () => {
+        const lines = element.querySelectorAll('.ace_line');
+        if (lines.length > 0) {
+          return Array.from(lines).map(line => line.textContent || '').join('\n');
+        }
+
+        const textLayer = element.querySelector('.ace_text-layer');
+        if (textLayer?.textContent) return textLayer.textContent;
+
+        const textarea = element.querySelector('textarea.ace_text-input') as HTMLTextAreaElement | null;
+        if (textarea?.value) return textarea.value;
+
+        return element.innerText || element.textContent || '';
+      },
+      setValue: (_value: string) => {
+        console.warn('setValue not supported for scraped Ace editor');
+      },
+      on: () => { },
+      off: () => { }
+    };
+
+    console.log('Ace editor setup complete');
   }
 
   private setupCodeMirrorEditor(element: HTMLElement): void {
@@ -406,13 +519,27 @@ class CodeCaptureService {
 
 
 
-  private captureSignal(force = false): void {
-    if (!this.enabled || !this.currentEditor) return;
+  private captureSignal(force = false): boolean {
+    if (!this.enabled) {
+      console.warn('CodeMentor capture skipped: extension is disabled.');
+      return false;
+    }
+
+    if (!this.currentEditor) {
+      console.warn('CodeMentor capture skipped: no code editor is currently detected.');
+      this.findCodeEditor();
+      if (!this.currentEditor) return false;
+    }
 
     try {
       const code = this.currentEditor.getValue();
+      if (!force && !code.trim()) {
+        console.warn('CodeMentor capture skipped: detected editor has no code text.');
+        return false;
+      }
+
       // Optimization: Skip if code matches last captured, unless forced.
-      if (!force && code === this.lastCapturedCode) return;
+      if (!force && code === this.lastCapturedCode) return false;
 
       this.lastCapturedCode = code;
 
@@ -424,7 +551,7 @@ class CodeCaptureService {
         type: 'CAPTURE_CODE_UPDATE',
         data: {
           sessionId: this.sessionId,
-          url: window.location.href, // Use URL for context mapping
+          url: this.getPageUrl(), // Use top page URL for context mapping, including editor frames
           language: this.detectLanguage(),
           rawCode: code,
           signalVector: signals
@@ -432,8 +559,10 @@ class CodeCaptureService {
       });
 
       console.log('Signal captured and sent:', signals);
+      return true;
     } catch (error) {
       console.error('Error during signal capture:', error);
+      return false;
     }
   }
 
@@ -540,7 +669,7 @@ class CodeCaptureService {
       description: description.trim(),
       difficulty: info.difficulty,
       constraints: constraints,
-      url: window.location.href
+      url: this.getPageUrl()
     };
 
     console.log('CAPTURED PROBLEM DETAILS:', problem);
@@ -672,7 +801,7 @@ class CodeCaptureService {
       }
     } else if (hostname.includes('geeksforgeeks.org')) {
       platform = 'GEEKSFORGEEKS';
-      problemId = problemDetails.title || 'GFG Problem';
+      problemId = this.getProblemKeyFromUrl(window.location.href);
     }
 
     chrome.storage.local.get(['codementor_handle'], (result) => {
@@ -691,6 +820,20 @@ class CodeCaptureService {
       chrome.runtime.sendMessage({
         type: 'LOG_PROBLEM_ATTEMPT',
         data: attemptData
+      });
+
+      const historyKey = this.getProblemKeyFromUrl(window.location.href);
+      chrome.storage.local.get(['problemHintDepthMap', 'problemHintHistoryMap'], (store) => {
+        const depthMap = store.problemHintDepthMap || {};
+        const historyMap = store.problemHintHistoryMap || {};
+        delete depthMap[historyKey];
+        delete historyMap[historyKey];
+        chrome.storage.local.set({
+          problemHintDepthMap: depthMap,
+          problemHintHistoryMap: historyMap,
+          latestHints: [],
+          activeHintProblemId: null
+        });
       });
     });
 

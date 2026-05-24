@@ -15,6 +15,7 @@ public class ProblemAttemptResponseDTO {
     private String difficulty;
     private int hintsUsed;
     private boolean completed;
+    private boolean struggling;
     private LocalDateTime timestamp;
 
     public ProblemAttemptResponseDTO(
@@ -25,6 +26,7 @@ public class ProblemAttemptResponseDTO {
             String difficulty,
             int hintsUsed,
             boolean completed,
+            boolean struggling,
             LocalDateTime timestamp) {
 
         this.id = id;
@@ -34,6 +36,7 @@ public class ProblemAttemptResponseDTO {
         this.difficulty = difficulty;
         this.hintsUsed = hintsUsed;
         this.completed = completed;
+        this.struggling = struggling;
         this.timestamp = timestamp;
     }
 

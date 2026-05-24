@@ -27,7 +27,6 @@ public class CodeAnalysisRequest {
     private String language;
     
     @JsonProperty("rawCode")
-    @NotBlank(message = "Code cannot be empty")
     private String rawCode;
     
     @JsonProperty("signalVector")
@@ -36,4 +35,13 @@ public class CodeAnalysisRequest {
 
     @JsonProperty("studentLevel")
     private String studentLevel;
+
+    @JsonProperty("handle")
+    private String handle;
+
+    @JsonProperty("problemId")
+    private String problemId;
+
+    @JsonProperty("hintDepth")
+    private Integer hintDepth;
 }

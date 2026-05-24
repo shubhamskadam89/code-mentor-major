@@ -19,6 +19,9 @@ import {
   ArrowLeft,
   BarChart2
 } from 'lucide-react';
+import logoMark from '../../assets/codementor-logo.svg';
+import navbarLight from '../../assets/codementor-navbar-light.svg';
+import navbarDark from '../../assets/codementor-navbar-dark.svg';
 
 const SIDEBAR_COLLAPSED_KEY = 'sidebar_collapsed';
 
@@ -72,20 +75,20 @@ export function Sidebar({
   return (
     <aside
       className={`
-        flex-shrink-0 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800
+        cm-nav-surface flex-shrink-0 border-r
         transition-all duration-300 overflow-hidden z-20 fixed md:relative h-screen flex flex-col
         ${collapsed ? 'w-0 md:w-16 -translate-x-full md:translate-x-0' : 'w-64'}
       `}
     >
       {/* Logo */}
       <div className="p-4 flex items-center border-b border-zinc-100 dark:border-zinc-800/50 shrink-0 overflow-hidden">
-        <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center text-white font-bold text-lg shrink-0">
-          🎓
-        </div>
-        {!collapsed && (
-          <span className="ml-2.5 font-extrabold text-xl font-sans tracking-tight text-zinc-900 dark:text-white whitespace-nowrap">
-            CodeMentor
-          </span>
+        {collapsed ? (
+          <img src={logoMark} alt="CodeMentor" className="w-8 h-8 rounded-lg shrink-0" />
+        ) : (
+          <>
+            <img src={navbarLight} alt="CodeMentor" className="h-8 w-auto max-w-[180px] dark:hidden" />
+            <img src={navbarDark} alt="CodeMentor" className="hidden h-8 w-auto max-w-[180px] dark:block" />
+          </>
         )}
       </div>
 

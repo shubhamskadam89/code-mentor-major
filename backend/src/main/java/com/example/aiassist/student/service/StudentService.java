@@ -26,7 +26,18 @@ public class StudentService {
 
     public StudentProfileResponse getProfileByHandle(String handle) {
         StudentProfile profile = studentProfileRepository.findByHandle(handle)
-                .orElseThrow(() -> new ResourceNotFoundException("Student profile not found for handle: " + handle));
+                .orElseGet(() -> {
+                    StudentProfile newProfile = new StudentProfile();
+                    newProfile.setName(handle);
+                    newProfile.setHandle(handle);
+                    newProfile.setPrn("");
+                    newProfile.setDepartment("General");
+                    newProfile.setProfilePictureUrl("");
+                    newProfile.setCurrentStreak(0);
+                    newProfile.setMaxStreak(0);
+                    newProfile.setTotalActiveDays(0);
+                    return studentProfileRepository.save(newProfile);
+                });
 
         return mapToResponse(profile);
     }

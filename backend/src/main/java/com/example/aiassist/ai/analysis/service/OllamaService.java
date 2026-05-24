@@ -19,18 +19,30 @@ public class OllamaService {
     @Value("${ai.ollama.model:nemotron-3-super:cloud}")
     private String model;
 
-    public String generateHint(String problem, String code, String studentLevel) {
+    public String generateHint(
+            String problem,
+            String code,
+            String studentLevel,
+            String codeStatus,
+            String detailLevel,
+            String topicWeakness,
+            int hintDepth,
+            int priorHintsOnProblem) {
 
         if (problem == null || problem.isBlank()) {
             throw new BadRequestException("Problem description cannot be empty");
         }
 
-        if (code == null || code.isBlank()) {
-            throw new BadRequestException("Code cannot be empty");
-        }
-
         String level = (studentLevel != null && !studentLevel.isBlank()) ? studentLevel : "intermediate";
-        String prompt = buildPrompt(problem, code, level);
+        String prompt = buildPrompt(
+                problem,
+                code == null ? "" : code,
+                level,
+                codeStatus,
+                detailLevel,
+                topicWeakness,
+                hintDepth,
+                priorHintsOnProblem);
 
         Map<String, Object> requestBody = Map.of(
                 "model", model,
@@ -68,37 +80,66 @@ public class OllamaService {
         }
     }
 
-    private String buildPrompt(String problem, String code, String studentLevel) {
+    private String buildPrompt(
+            String problem,
+            String code,
+            String studentLevel,
+            String codeStatus,
+            String detailLevel,
+            String topicWeakness,
+            int hintDepth,
+            int priorHintsOnProblem) {
         String levelInstructions;
         switch (studentLevel.toLowerCase()) {
             case "beginner" ->
-                levelInstructions = "Use very simple language, avoid jargon. Give a tiny nudge like 'Try thinking about what data structure helps with fast lookups.'";
+                levelInstructions = "Use simple language and explain the thinking step. You may give a more detailed hint, but do not write code.";
             case "expert" ->
-                levelInstructions = "Be concise and technical. You may reference algorithms, complexity or patterns directly (e.g. 'Consider amortized O(1) via two-stack approach').";
+                levelInstructions = "Be concise and technical. Give a one-line nudge, ideally phrased as a question or invariant.";
             default ->
-                levelInstructions = "Be clear but not too simple. Reference general concepts like loops, recursion, or edge cases without revealing the answer.";
+                levelInstructions = "Be clear but not too simple. Reference the relevant pattern or edge case without revealing the full answer.";
         }
 
         String base = """
-                You are a strict Socratic coding mentor. Your job is to guide the student, NOT solve the problem.
+                You are CodeMentor, an adaptive Socratic coding tutor. Guide the student, do not solve the problem.
 
                 ABSOLUTE RULES:
                 1. NEVER write code.
-                2. NEVER give the direct answer or solution logic.
-                3. Give ONLY ONE short hint sentence (max 2 lines).
-                4. Ask the student a guiding question or point out what to think about.
-                5. Start with "HINT: " always.
+                2. NEVER give a complete solution.
+                3. Give one hint only, maximum 20 words.
+                4. Start with "HINT: " always.
+                5. Match the hint detail to the student's level and hint depth.
+                6. If your hint exceeds 20 words, rewrite it shorter before answering.
 
                 Level instructions: %s
+                Code status: %s
+                Detail level: %s
+                Student weak area: %s
+                Prior hints on this problem: %d
+                Requested hint depth: %d
+
+                Hint behavior:
+                - NO_CODE: give approach-level guidance and the first thing to think about.
+                - PARTIAL_CODE: inspect direction and point to the next reasoning step.
+                - LIKELY_STUCK: give a more concrete nudge about the mistaken idea or invariant.
+                - REPEATED_STUCK: escalate one level, but still avoid code.
 
                 Problem: %s
 
                 Student's current code:
                 %s
 
-                Provide a single guiding hint:
+                Provide a single adaptive hint in 20 words or fewer:
                 """;
 
-        return String.format(base, levelInstructions, problem, code);
+        return String.format(
+                base,
+                levelInstructions,
+                codeStatus,
+                detailLevel,
+                topicWeakness,
+                priorHintsOnProblem,
+                hintDepth,
+                problem,
+                code.isBlank() ? "(student has not written code yet)" : code);
     }
 }

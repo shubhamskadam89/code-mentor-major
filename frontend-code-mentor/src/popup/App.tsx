@@ -6,6 +6,8 @@ import {
   Layout,
   UserCheck
 } from 'lucide-react';
+import logoMark from '../assets/codementor-logo.svg';
+import navbarDark from '../assets/codementor-navbar-dark.svg';
 
 interface AssignmentContext {
   title: string;
@@ -118,10 +120,10 @@ const App: React.FC = () => {
         {/* Logo and Intro */}
         <div className="w-full flex-1 flex flex-col items-center justify-center space-y-6">
           <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl flex items-center justify-center text-white text-3xl shadow-lg shadow-orange-500/20">
-            🦊
+            <img src={logoMark} alt="CodeMentor" className="w-full h-full rounded-2xl" />
           </div>
           <div className="text-center space-y-2">
-            <h1 className="text-xl font-black tracking-tight">CodeMentor Launcher</h1>
+            <img src={navbarDark} alt="CodeMentor" className="h-9 w-auto mx-auto" />
             <p className="text-xs text-zinc-400 max-w-[240px] leading-relaxed mx-auto">
               Accelerate your coding capabilities on LeetCode & GeeksforGeeks with real-time AI mentoring.
             </p>
@@ -148,10 +150,7 @@ const App: React.FC = () => {
       {/* Top Header */}
       <header className="p-4 border-b border-zinc-900 bg-zinc-900/50 backdrop-blur-md flex items-center justify-between shrink-0 z-10">
         <div className="flex items-center space-x-2.5">
-          <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-white font-black shadow-md ${isStudent ? 'bg-orange-500' : 'bg-blue-600'
-            }`}>
-            {isStudent ? '🦊' : '🎓'}
-          </div>
+          <img src={logoMark} alt="CodeMentor" className="w-7 h-7 rounded-lg shadow-md" />
           <div>
             <h2 className="text-xs font-black tracking-tight">CodeMentor Companion</h2>
             <p className="text-[9px] font-bold text-zinc-450 uppercase tracking-wider">

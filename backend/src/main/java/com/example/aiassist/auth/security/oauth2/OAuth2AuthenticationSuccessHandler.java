@@ -59,6 +59,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
                 .queryParam("email", authResponse.getEmail())
                 .queryParam("name", authResponse.getName())
                 .queryParam("role", authResponse.getRole())
+                .queryParam("handle", authResponse.getHandle())
                 .build()
                 .toUriString();
 

@@ -21,6 +21,7 @@ import {
   ArrowRight,
   ArrowLeft,
   Calendar,
+  ExternalLink,
   CheckCircle2,
   Minus
 } from 'lucide-react';
@@ -196,6 +197,15 @@ export function TeacherAssignments() {
       }
       return p;
     }));
+  };
+
+  const normalizeProblemId = (value?: string) => {
+    return (value || '')
+      .toLowerCase()
+      .trim()
+      .replace(/^(leetcode|gfg|geeksforgeeks|codechef|hackerrank)[_-]+/, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
   };
 
   const handleCreateAssignmentSubmit = async (e: React.FormEvent) => {
@@ -450,6 +460,46 @@ export function TeacherAssignments() {
 
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm">
             <div className="p-6 border-b border-zinc-200 dark:border-zinc-850">
+              <h3 className="font-extrabold text-lg">Assigned Problems</h3>
+              <p className="text-xs text-zinc-500 font-semibold">Problems attached to this assignment.</p>
+            </div>
+            <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              {selectedAssignment.problems?.length ? selectedAssignment.problems.map((problem: any, index: number) => {
+                const href = problem.problemUrl || '#';
+                return (
+                  <div key={problem.problemId || index} className="flex items-center justify-between gap-4 p-5">
+                    <div className="min-w-0">
+                      <div className="font-bold text-zinc-900 dark:text-white truncate">{problem.title || problem.problemId}</div>
+                      <div className="flex items-center gap-2 mt-1 text-xs font-bold uppercase">
+                        <span className="text-blue-500">{problem.platform}</span>
+                        <span className="text-zinc-400">·</span>
+                        <span className="text-amber-500">{problem.difficulty || 'Unknown'}</span>
+                        <span className="text-zinc-400">·</span>
+                        <span className="text-zinc-500">{problem.points || 0} pts</span>
+                      </div>
+                    </div>
+                    {href !== '#' && (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-500 hover:text-white rounded-xl text-xs font-bold text-zinc-600 dark:text-zinc-300 transition"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        <span>Open</span>
+                      </a>
+                    )}
+                  </div>
+                );
+              }) : (
+                <div className="p-8 text-center text-zinc-500 font-medium">No problems attached yet.</div>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm">
+            <div className="p-6 border-b border-zinc-200 dark:border-zinc-850">
               <h3 className="font-extrabold text-lg">Student Assignment Tracker</h3>
               <p className="text-xs text-zinc-500 font-semibold">Verify individual completion rates and solved metrics for each student.</p>
             </div>
@@ -497,7 +547,8 @@ export function TeacherAssignments() {
                           </div>
                         </td>
                         {selectedAssignment.problems?.map((p: any) => {
-                          const probStatus = st.problems?.find((sp: any) => sp.problemId === p.problemId);
+                          const targetProblemId = normalizeProblemId(p.problemId);
+                          const probStatus = st.problems?.find((sp: any) => normalizeProblemId(sp.problemId) === targetProblemId);
                           const completed = probStatus ? probStatus.completed : false;
                           return (
                             <td key={p.problemId} className="px-6 py-4 text-center whitespace-nowrap">

@@ -12,6 +12,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../../../shared/hooks/useExtensionBridge';
+import logoMark from '../../../assets/codementor-logo.svg';
 
 export function TeacherExtensionView() {
   const { isAuth, email, logout, loading: authLoading } = useAuth();
@@ -73,7 +74,7 @@ export function TeacherExtensionView() {
     return (
       <div className="w-full h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col items-center justify-center font-sans p-6 text-center select-none">
         <div className="w-16 h-16 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center text-white text-3xl shadow-lg mb-4 animate-bounce">
-          🎓
+          <img src={logoMark} alt="CodeMentor" className="w-full h-full rounded-2xl" />
         </div>
         <h2 className="text-lg font-extrabold text-zinc-900 dark:text-white">Welcome to CodeMentor</h2>
         <p className="text-xs text-zinc-405 dark:text-zinc-500 max-w-xs mt-2 leading-relaxed">
@@ -104,7 +105,7 @@ export function TeacherExtensionView() {
       <header className="p-4 border-b border-zinc-200 dark:border-zinc-900 bg-white dark:bg-zinc-900 shrink-0 flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-extrabold shadow">
-            🎓
+            <img src={logoMark} alt="CodeMentor" className="w-full h-full rounded-lg" />
           </div>
           <div>
             <h1 className="text-sm font-extrabold tracking-tight">CodeMentor</h1>

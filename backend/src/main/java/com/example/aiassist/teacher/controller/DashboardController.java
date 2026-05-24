@@ -250,25 +250,21 @@ public class DashboardController {
                 if (attemptProblemId == null || assignmentProblemId == null) {
                         return false;
                 }
-                String s1 = attemptProblemId.toLowerCase().trim();
-                String s2 = assignmentProblemId.toLowerCase().trim();
-                if (s1.equals(s2)) {
-                        return true;
-                }
-                // Strip platform prefixes
-                s1 = s1.replaceAll("^(leetcode|gfg|codechef|hackerrank)_", "");
-                s2 = s2.replaceAll("^(leetcode|gfg|codechef|hackerrank)_", "");
-                
-                // Replace delimiters
-                s1 = s1.replace('_', '-');
-                s2 = s2.replace('_', '-');
-                
-                return s1.equals(s2);
+                return canonicalProblemId(attemptProblemId).equals(canonicalProblemId(assignmentProblemId));
+        }
+
+        private String canonicalProblemId(String problemId) {
+                String normalized = problemId.toLowerCase().trim();
+                normalized = normalized.replaceAll("^https?://[^/]+/(problems|challenges)/([^/?#]+).*$", "$2");
+                normalized = normalized.replaceAll("^(leetcode|gfg|geeksforgeeks|codechef|hackerrank)[_-]+", "");
+                normalized = normalized.replaceAll("[^a-z0-9]+", "-");
+                normalized = normalized.replaceAll("^-+|-+$", "");
+                return normalized;
         }
 
         private String getProblemUrl(String platform, String problemId) {
                 if (platform == null || problemId == null) return "#";
-                String cleanId = problemId.replaceAll("^(leetcode|gfg|codechef|hackerrank)_", "");
+                String cleanId = canonicalProblemId(problemId);
                 switch (platform.toUpperCase()) {
                         case "LEETCODE":
                                 return "https://leetcode.com/problems/" + cleanId + "/";
@@ -359,7 +355,7 @@ public class DashboardController {
                         Map<String, Object> map = new HashMap<>();
                         map.put("name", sp.getName());
                         map.put("handle", sp.getHandle());
-                        map.put("prn", String.format("0%02d", sp.getId() % 100));
+                        map.put("prn", sp.getPrn());
                         map.put("rating", rating);
                         map.put("score", score);
                         map.put("problems", solved);
@@ -623,11 +619,62 @@ public class DashboardController {
                 summary.put("pendingSubmissionsCount", pendingSubmissionsCount);
                 summary.put("activeTodayCount", activeStudentIds.size());
                 summary.put("averageSolveRate", avgSolveRatePercent);
+                summary.put("strugglingStudentsCount", calculateStrugglingStudents(classrooms));
                 summary.put("latestAssignment", latestAssignmentMap);
                 summary.put("activities", activities);
+                alerts.addAll(buildStrugglingStudentAlerts(classrooms, alertId));
                 summary.put("alerts", alerts);
 
                 return ResponseEntity.ok(summary);
+        }
+
+        private long calculateStrugglingStudents(List<Classroom> classrooms) {
+                Set<Long> strugglingStudentIds = new HashSet<>();
+
+                for (Classroom classroom : classrooms) {
+                        for (StudentProfile student : classroom.getStudents()) {
+                                List<ProblemAttempt> attempts = problemAttemptRepository.findByStudentProfileId(student.getId());
+                                boolean struggling = attempts.stream()
+                                                .anyMatch(a -> !a.isCompleted() && a.getHintsUsed() >= 3);
+                                if (struggling) {
+                                        strugglingStudentIds.add(student.getId());
+                                }
+                        }
+                }
+
+                return strugglingStudentIds.size();
+        }
+
+        private List<Map<String, Object>> buildStrugglingStudentAlerts(List<Classroom> classrooms, long startId) {
+                List<Map<String, Object>> hintAlerts = new ArrayList<>();
+                Set<Long> processed = new HashSet<>();
+                long alertId = startId;
+
+                for (Classroom classroom : classrooms) {
+                        for (StudentProfile student : classroom.getStudents()) {
+                                if (!processed.add(student.getId())) {
+                                        continue;
+                                }
+
+                                List<ProblemAttempt> attempts = problemAttemptRepository.findByStudentProfileId(student.getId());
+                                Optional<ProblemAttempt> topStruggle = attempts.stream()
+                                                .filter(a -> !a.isCompleted() && a.getHintsUsed() >= 3)
+                                                .max(Comparator.comparingInt(ProblemAttempt::getHintsUsed));
+
+                                if (topStruggle.isPresent()) {
+                                        ProblemAttempt attempt = topStruggle.get();
+                                        Map<String, Object> alert = new HashMap<>();
+                                        alert.put("id", alertId++);
+                                        alert.put("type", "warning");
+                                        alert.put("text", student.getName() + " used " + attempt.getHintsUsed()
+                                                        + " hints on " + getProblemTitle(attempt)
+                                                        + ". Consider checking in.");
+                                        hintAlerts.add(alert);
+                                }
+                        }
+                }
+
+                return hintAlerts.stream().limit(5).toList();
         }
 
         private double getStudentRating(StudentProfile sp) {

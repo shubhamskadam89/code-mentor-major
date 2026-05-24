@@ -22,4 +22,7 @@ export interface CodeUpdateRequest {
   language: string;
   rawCode: string;
   signalVector: SignalVector;
+  handle?: string;
+  problemId?: string;
+  hintDepth?: number;
 }

@@ -114,7 +114,7 @@ export function StudentProfile() {
 
           <div className="divide-y divide-zinc-100 dark:divide-zinc-800/80 text-sm">
             <div className="py-3 flex justify-between">
-              <span className="font-semibold text-zinc-400">PRN (Student ID)</span>
+              <span className="font-semibold text-zinc-400">PRN</span>
               <span className="font-bold text-zinc-800 dark:text-zinc-200">{profile.prn || "Not set"}</span>
             </div>
             <div className="py-3 flex justify-between">

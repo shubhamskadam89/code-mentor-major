@@ -18,6 +18,10 @@ export interface StudentRosterItem {
   department: string;
   rating: number;
   classrooms?: string[];
+  totalHintsUsed?: number;
+  strugglingProblems?: number;
+  activeProblems?: number;
+  needsAttention?: boolean;
 }
 
 export async function fetchTeacherProfile(email: string): Promise<TeacherProfile> {
@@ -51,13 +55,13 @@ export async function updateTeacherProfile(email: string, profileData: { name: s
 export async function fetchTeacherStudentRoster(email: string): Promise<StudentRosterItem[]> {
   const response = await fetch(`${BASE_URL}/teachers/students/email/${email}`);
   if (!response.ok) {
-    throw new Error(`Failed to fetch student roster: ${response.statusText}`);
+    throw new Error(`Failed to fetch students: ${response.statusText}`);
   }
   const res = await response.json();
   if (res.success && Array.isArray(res.data)) {
     return res.data;
   }
-  throw new Error(res.message || "Failed to load student roster");
+  throw new Error(res.message || "Failed to load students");
 }
 
 export interface TeacherDashboardSummary {
@@ -66,6 +70,7 @@ export interface TeacherDashboardSummary {
   activeAssignmentsCount: number;
   pendingSubmissionsCount: number;
   activeTodayCount: number;
+  strugglingStudentsCount: number;
   averageSolveRate: number;
   latestAssignment: {
     title: string;

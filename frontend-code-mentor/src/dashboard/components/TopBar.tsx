@@ -62,7 +62,7 @@ export function TopBar({
   const profileRoute = user?.role === 'teacher' ? '/teacher/profile' : '/student/profile';
 
   return (
-    <header className="h-16 flex-shrink-0 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between px-6 z-10 w-full">
+    <header className="cm-nav-surface h-16 flex-shrink-0 border-b flex items-center justify-between px-6 z-10 w-full">
       <div className="flex items-center space-x-4">
         {/* Mobile hamburger */}
         <button

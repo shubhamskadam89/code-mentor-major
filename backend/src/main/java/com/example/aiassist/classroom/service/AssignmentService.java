@@ -3,6 +3,7 @@ package com.example.aiassist.classroom.service;
 import com.example.aiassist.classroom.dto.AssignmentRequestDTO;
 import com.example.aiassist.classroom.dto.AssignmentResponseDTO;
 import com.example.aiassist.classroom.entity.Assignment;
+import com.example.aiassist.classroom.entity.AssignmentProblem;
 import com.example.aiassist.classroom.entity.Classroom;
 import com.example.aiassist.classroom.repository.AssignmentRepository;
 import com.example.aiassist.classroom.repository.ClassroomRepository;
@@ -42,7 +43,7 @@ public class AssignmentService {
         assignment.setTotalMarks(request.getTotalMarks());
         assignment.setCreatedAt(LocalDateTime.now());
         assignment.setDueDate(request.getDueDate());
-        assignment.setProblems(request.getProblems());
+        assignment.setProblems(normalizeProblems(request.getProblems()));
 
         Assignment saved = assignmentRepository.save(assignment);
         return mapToResponse(saved);
@@ -86,5 +87,27 @@ public class AssignmentService {
                 assignment.getDueDate(),
                 assignment.getProblems()
         );
+    }
+
+    private List<AssignmentProblem> normalizeProblems(List<AssignmentProblem> problems) {
+        if (problems == null) {
+            return List.of();
+        }
+        return problems.stream().map(problem -> {
+            problem.setProblemId(canonicalProblemId(problem.getProblemId()));
+            return problem;
+        }).toList();
+    }
+
+    private String canonicalProblemId(String problemId) {
+        if (problemId == null) {
+            return "";
+        }
+        String normalized = problemId.toLowerCase().trim();
+        normalized = normalized.replaceAll("^https?://[^/]+/(problems|challenges)/([^/?#]+).*$", "$2");
+        normalized = normalized.replaceAll("^(leetcode|gfg|geeksforgeeks|codechef|hackerrank)[_-]+", "");
+        normalized = normalized.replaceAll("[^a-z0-9]+", "-");
+        normalized = normalized.replaceAll("^-+|-+$", "");
+        return normalized;
     }
 }

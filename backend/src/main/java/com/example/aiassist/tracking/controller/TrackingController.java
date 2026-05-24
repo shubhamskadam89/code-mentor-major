@@ -30,6 +30,16 @@ public class TrackingController {
         );
     }
 
+    @PostMapping("/hint")
+    public ApiResponse<ProblemAttemptResponseDTO> logHint(
+            @Valid @RequestBody ProblemTrackingRequest request) {
+
+        return ApiResponse.success(
+                trackingService.logHintUsage(request),
+                "Hint usage logged successfully"
+        );
+    }
+
     @GetMapping("/student/{studentId}")
     public ApiResponse<List<ProblemAttemptResponseDTO>> getAttempts(
             @PathVariable Long studentId,

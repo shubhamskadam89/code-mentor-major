@@ -18,6 +18,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { useAuth, apiGet } from '../../../shared/hooks/useExtensionBridge';
+import logoMark from '../../../assets/codementor-logo.svg';
 
 // ─────────────────────────────────────────────
 // Types (matching what the backend actually returns)
@@ -73,9 +74,51 @@ export function StudentExtensionView() {
   void assignmentsLoading; // used to guard fetch; suppress lint
 
   // Hints — fetched from backend on demand
-  const [hints, setHints] = useState<Array<{ id: string; message: string; severity: string }>>([]);
+  const [hints, setHints] = useState<Array<{
+    id: string;
+    message: string;
+    severity: string;
+    level?: string;
+    detailLevel?: string;
+    reason?: string;
+    nextAction?: string;
+    hintDepth?: number;
+    studentLevel?: string;
+  }>>([]);
   const [hintLoading, setHintLoading] = useState(false);
   const [hintError, setHintError] = useState<string | null>(null);
+
+  const normalizeHints = useCallback((payload: any): Array<{
+    id: string;
+    message: string;
+    severity: string;
+    level?: string;
+    detailLevel?: string;
+    reason?: string;
+    nextAction?: string;
+    hintDepth?: number;
+    studentLevel?: string;
+  }> => {
+    const rawHints = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.hints)
+        ? payload.hints
+        : Array.isArray(payload?.data?.hints)
+          ? payload.data.hints
+          : [];
+
+    return rawHints.map((h: any, idx: number) => ({
+      id: String(h?.id ?? idx),
+      message: typeof h === 'string' ? h : h?.message ?? h?.text ?? JSON.stringify(h),
+      severity: h?.severity ?? h?.level ?? 'medium',
+      level: h?.level,
+      detailLevel: h?.detailLevel,
+      reason: h?.reason,
+      nextAction: h?.nextAction,
+      hintDepth: h?.hintDepth,
+      studentLevel: h?.studentLevel,
+    }));
+  }, []);
 
   // ─── Data fetchers ─────────────────────────────
   const fetchStats = useCallback(async () => {
@@ -101,38 +144,97 @@ export function StudentExtensionView() {
     }
   }, [isAuth, fetchStats, fetchAssignments]);
 
+  useEffect(() => {
+    if (typeof chrome === 'undefined' || !chrome.storage?.local) return;
+
+    chrome.storage.local.get(['latestHints'], (result) => {
+      const nextHints = normalizeHints(result.latestHints);
+      if (nextHints.length > 0) {
+        setHints(nextHints);
+      }
+    });
+
+    const handleRuntimeMessage = (message: any) => {
+      if (message?.type !== 'HINT_UPDATE') return;
+
+      const nextHints = normalizeHints(message.data);
+      setHintLoading(false);
+      if (nextHints.length > 0) {
+        setHints(nextHints);
+        setHintError(null);
+      } else {
+        setHintError('No hint is available yet. Try editing your code and request again.');
+      }
+    };
+
+    const handleStorageChange = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      areaName: string,
+    ) => {
+      if (areaName !== 'local' || !changes.latestHints) return;
+
+      const nextHints = normalizeHints(changes.latestHints.newValue);
+      setHintLoading(false);
+      if (nextHints.length > 0) {
+        setHints(nextHints);
+        setHintError(null);
+      }
+    };
+
+    chrome.runtime.onMessage.addListener(handleRuntimeMessage);
+    chrome.storage.onChanged.addListener(handleStorageChange);
+
+    return () => {
+      chrome.runtime.onMessage.removeListener(handleRuntimeMessage);
+      chrome.storage.onChanged.removeListener(handleStorageChange);
+    };
+  }, [normalizeHints]);
+
   // ─── Hint request ─────────────────────────────
   const handleRequestHint = async () => {
     if (!token) return;
     setHintLoading(true);
     setHintError(null);
-    try {
-      const res = await fetch('http://localhost:8080/api/v1/hints/request', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        credentials: 'include',
-        body: JSON.stringify({ handle }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const rawHints: any[] = Array.isArray(data) ? data : data?.hints ?? data?.data ?? [];
-        setHints(
-          rawHints.map((h: any, idx: number) => ({
-            id: String(h.id ?? idx),
-            message: typeof h === 'string' ? h : h.message ?? h.text ?? JSON.stringify(h),
-            severity: h.severity ?? 'medium',
-          }))
-        );
-      } else {
-        setHintError('Could not fetch hints. Make sure you are on a coding platform page.');
-      }
-    } catch {
-      setHintError('Backend unreachable. Please ensure the backend server is running.');
-    } finally {
+
+    if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
       setHintLoading(false);
+      setHintError('Extension messaging is unavailable. Reload the extension and try again.');
+      return;
+    }
+
+    try {
+      chrome.runtime.sendMessage({ type: 'REQUEST_HINT' }, (response) => {
+        if (chrome.runtime.lastError || response?.error) {
+          setHintLoading(false);
+          setHintError('Could not reach the coding platform tab. Open LeetCode or GeeksforGeeks and try again.');
+          return;
+        }
+
+        if (response && response.success === false) {
+          setHintLoading(false);
+          const capture = response.capture;
+          if (capture?.hasEditor === false) {
+            setHintError('I found the coding tab, but not the editor yet. Click inside the code editor and try again.');
+          } else if (capture?.codeLength === 0) {
+            setHintError('I found the editor, but it looks empty. Type or paste your solution code and try again.');
+          } else {
+            setHintError('The coding tab did not return code. Refresh the problem page and try again.');
+          }
+        }
+      });
+
+      window.setTimeout(() => {
+        setHintLoading((stillLoading) => {
+          if (stillLoading) {
+            setHintError('No hint came back yet. Make sure the coding tab is active and your code editor has content.');
+            return false;
+          }
+          return stillLoading;
+        });
+      }, 8000);
+    } catch {
+      setHintLoading(false);
+      setHintError('Could not request a hint. Make sure you are on a coding platform page.');
     }
   };
 
@@ -179,7 +281,7 @@ export function StudentExtensionView() {
     return (
       <div className="w-full h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col items-center justify-center font-sans p-6 text-center select-none">
         <div className="w-16 h-16 bg-orange-500 rounded-2xl mx-auto flex items-center justify-center text-white text-3xl shadow-lg mb-4 animate-bounce">
-          🦊
+          <img src={logoMark} alt="CodeMentor" className="w-full h-full rounded-2xl" />
         </div>
         <h2 className="text-lg font-extrabold text-zinc-900 dark:text-white">Welcome to CodeMentor</h2>
         <p className="text-xs text-zinc-500 max-w-xs mt-2 leading-relaxed">
@@ -201,7 +303,7 @@ export function StudentExtensionView() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center text-white font-extrabold shadow">
-              🦊
+              <img src={logoMark} alt="CodeMentor" className="w-full h-full rounded-lg" />
             </div>
             <div>
               <h1 className="text-sm font-extrabold tracking-tight">CodeMentor</h1>
@@ -305,7 +407,7 @@ export function StudentExtensionView() {
                     }`}
                   >
                     <Sparkles className={`w-4 h-4 ${hintLoading ? 'animate-spin' : ''}`} />
-                    <span>{hintLoading ? 'Analyzing...' : 'Request AI Hint'}</span>
+                    <span>{hintLoading ? 'Analyzing...' : hints.length > 0 ? 'Need Stronger Hint?' : 'Request AI Hint'}</span>
                   </button>
 
                   <a
@@ -361,7 +463,7 @@ export function StudentExtensionView() {
                           >
                             <div className="flex justify-between items-start gap-2">
                               <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${styles.badge}`}>
-                                {styles.label}
+                                {hint.level ?? styles.label}
                               </span>
                               <button
                                 onClick={() => handleCopy(hint.id, hint.message)}
@@ -377,6 +479,30 @@ export function StudentExtensionView() {
                             <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 leading-relaxed">
                               {hint.message}
                             </p>
+                            {(hint.detailLevel || hint.studentLevel || hint.hintDepth) && (
+                              <div className="flex flex-wrap gap-1.5 pt-1">
+                                {hint.detailLevel && (
+                                  <span className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-[8px] font-black uppercase tracking-wider text-zinc-500">
+                                    {hint.detailLevel} detail
+                                  </span>
+                                )}
+                                {hint.studentLevel && (
+                                  <span className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-[8px] font-black uppercase tracking-wider text-zinc-500">
+                                    {hint.studentLevel}
+                                  </span>
+                                )}
+                                {hint.hintDepth && (
+                                  <span className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-[8px] font-black uppercase tracking-wider text-zinc-500">
+                                    depth {hint.hintDepth}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {hint.nextAction && (
+                              <p className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 border-t border-zinc-100 dark:border-zinc-800 pt-2">
+                                Next: {hint.nextAction}
+                              </p>
+                            )}
                           </div>
                         );
                       })}

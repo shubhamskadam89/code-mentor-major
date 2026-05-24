@@ -2,6 +2,18 @@
 import { apiService } from '../services/apiService'
 console.log('CodeMentor background script loaded');
 
+let latestCodingTabId: number | undefined;
+let latestCodingTabUrl: string | undefined;
+
+function rememberCodingTab(tabId?: number, url?: string) {
+  if (tabId !== undefined && tabId !== null) {
+    latestCodingTabId = tabId;
+  }
+  if (url) {
+    latestCodingTabUrl = url;
+  }
+}
+
 // Handle extension installation
 chrome.runtime.onInstalled.addListener((details) => {
   console.log('CodeMentor extension installed:', details);
@@ -37,16 +49,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
 
     case 'REQUEST_HINT':
-      handleRequestHint(sender.tab?.id);
-      sendResponse({ success: true });
+      handleRequestHint(sender.tab?.id).then(sendResponse);
+      isAsync = true;
       break;
 
     case 'CAPTURE_PROBLEM':
-      handleProblemCapture(message.data);
+      rememberCodingTab(sender.tab?.id, message.data?.url);
+      handleProblemCapture(message.data, sender.tab?.id);
       sendResponse({ success: true });
       break;
 
     case 'CAPTURE_CODE_UPDATE':
+      rememberCodingTab(sender.tab?.id, message.data?.url);
       handleCodeUpdate(message.data, sender.tab?.id);
       sendResponse({ success: true });
       break;
@@ -183,6 +197,7 @@ async function checkProblemAssignment(problemId: string) {
 // Handle code capture from content script
 function handleCodeCapture(data: any, _tabId?: number) {
   console.log('Code captured:', data);
+  rememberCodingTab(_tabId);
 
   // Store current problem info for popup/state
   const currentProblem = {
@@ -223,14 +238,58 @@ function getProblemKey(url: string): string {
       const match = parsed.pathname.match(/\/problems\/([^/]+)/);
       return match ? `leetcode_${match[1]}` : url;
     }
+    if (parsed.hostname.includes('geeksforgeeks.org')) {
+      const match = parsed.pathname.match(/\/problems\/([^/]+)/);
+      return match ? match[1] : url;
+    }
     return url;
   } catch {
     return url;
   }
 }
 
-function handleProblemCapture(data: any) {
+function detectPlatformFromUrl(url?: string): 'LEETCODE' | 'GEEKSFORGEEKS' | 'HACKERRANK' | 'CODECHEF' {
+  if (!url) return 'LEETCODE';
+  if (url.includes('geeksforgeeks.org')) return 'GEEKSFORGEEKS';
+  if (url.includes('hackerrank.com')) return 'HACKERRANK';
+  if (url.includes('codechef.com')) return 'CODECHEF';
+  return 'LEETCODE';
+}
+
+async function logHintUsage(data: any, response: any) {
+  const hints = Array.isArray(response?.hints) ? response.hints : [];
+  if (hints.length === 0) return;
+
+  try {
+    const store = await chrome.storage.local.get(['codementor_handle']);
+    const handle = store.codementor_handle;
+    if (!handle) {
+      console.warn('Skipping hint usage tracking: no codementor handle in storage.');
+      return;
+    }
+
+    const problemId = getProblemKey(data.url);
+    await fetch('http://localhost:8080/api/v1/tracking/hint', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        handle,
+        platform: detectPlatformFromUrl(data.url),
+        problemId,
+        difficulty: data.difficulty || 'Medium',
+        hintsUsed: hints.length,
+        completed: false,
+        hintOnly: true
+      })
+    });
+  } catch (err) {
+    console.error('Failed to log hint usage:', err);
+  }
+}
+
+function handleProblemCapture(data: any, tabId?: number) {
   console.log('Problem captured:', data);
+  rememberCodingTab(tabId, data?.url);
   const problemId = getProblemKey(data.url);
   checkProblemAssignment(problemId);
 
@@ -253,6 +312,7 @@ function handleProblemCapture(data: any) {
 function handleCodeUpdate(data: any, tabId?: number) {
   // data should contain { sessionId, language, rawCode, signalVector, url }
   console.log('Code update captured:', data);
+  rememberCodingTab(tabId, data?.url);
 
   chrome.storage.local.get(['problemContextMap'], (result) => {
     const map = result.problemContextMap || {};
@@ -265,31 +325,58 @@ function handleCodeUpdate(data: any, tabId?: number) {
       return;
     }
 
-    const updateRequest = {
+    chrome.storage.local.get(['codementor_handle', 'problemHintDepthMap'], (authStore) => {
+      const problemId = getProblemKey(data.url);
+      const depthMap = authStore.problemHintDepthMap || {};
+      const hintDepth = depthMap[problemId] || 1;
+
+      const updateRequest = {
       sessionId: data.sessionId,
       problemContextId: problemContextId,
       language: data.language,
       rawCode: data.rawCode,
-      signalVector: data.signalVector
-    };
+      signalVector: data.signalVector,
+      handle: authStore.codementor_handle,
+      problemId,
+      hintDepth
+      };
 
-    apiService.analyzeCode(updateRequest).then(response => {
+      apiService.analyzeCode(updateRequest).then(async response => {
       console.log('Received analysis response from backend:', response);
 
-      // ⭐ STORE HINTS FOR POPUP
-      chrome.storage.local.set({ latestHints: response.hints || [] });
+      logHintUsage(data, response);
+
+      if (response.hints && response.hints.length > 0) {
+        depthMap[problemId] = Math.min(5, hintDepth + 1);
+        chrome.storage.local.set({ problemHintDepthMap: depthMap });
+      }
+
+      const historyStore = await chrome.storage.local.get(['problemHintHistoryMap']);
+      const historyMap = historyStore.problemHintHistoryMap || {};
+      const previousHints = Array.isArray(historyMap[problemId]) ? historyMap[problemId] : [];
+      const nextHints = response.hints && response.hints.length > 0
+        ? [...previousHints, ...response.hints]
+        : previousHints;
+      historyMap[problemId] = nextHints;
+
+      // Store the full hint trail for this problem until it is solved.
+      chrome.storage.local.set({
+        latestHints: nextHints,
+        activeHintProblemId: problemId,
+        problemHintHistoryMap: historyMap
+      });
 
       // -> BROADCAST HINT UPDATE TO POPUP AND ANY OTHER ACTIVE LISTENERS
       chrome.runtime.sendMessage({
         type: 'HINT_UPDATE',
-        data: response
+        data: { ...response, hints: nextHints }
       }).catch(() => { /* Ignore Error if popup is closed */ });
 
       if (tabId !== undefined && tabId !== null) {
         console.log('SENDING HINT_UPDATE TO TAB ID:', tabId, 'Data:', response);
         chrome.tabs.sendMessage(tabId, {
           type: 'HINT_UPDATE',
-          data: response
+          data: { ...response, hints: nextHints }
         }, (result) => {
           if (chrome.runtime.lastError) {
             console.error('Error sending message to tab:', chrome.runtime.lastError.message);
@@ -302,6 +389,7 @@ function handleCodeUpdate(data: any, tabId?: number) {
       }
     }).catch(err => {
       console.error('Error in analyzeCode promise chain:', err);
+    });
     });
   });
 }
@@ -334,16 +422,47 @@ function handleProgressSave(data: any) {
   });
 }
 
-function handleRequestHint(tabId?: number) {
-  if (tabId) {
-    chrome.tabs.sendMessage(tabId, { type: 'TRIGGER_CAPTURE' }).catch(() => { });
-  } else {
-    // If request comes from popup, tabId might be missing/belong to extension
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0] && tabs[0].id) {
-        chrome.tabs.sendMessage(tabs[0].id, { type: 'TRIGGER_CAPTURE' }).catch(() => { });
-      }
+async function handleRequestHint(tabId?: number): Promise<{ success: boolean; tabId?: number; error?: string; capture?: any }> {
+  const targetTabId = tabId ?? latestCodingTabId;
+
+  if (targetTabId) {
+    console.log('Requesting hint capture from coding tab:', {
+      targetTabId,
+      latestCodingTabUrl
     });
+
+    try {
+      const capture = await chrome.tabs.sendMessage(targetTabId, { type: 'TRIGGER_CAPTURE' });
+      console.log('Hint capture trigger response:', capture);
+      return { success: !!capture?.success, tabId: targetTabId, capture };
+    } catch (err) {
+      console.warn('Failed to trigger capture on remembered coding tab:', err);
+    }
+  }
+
+  const tabs = await chrome.tabs.query({
+    active: true,
+    currentWindow: true
+  });
+  const activeTabId = tabs[0]?.id;
+
+  if (!activeTabId) {
+    console.warn('Cannot request hint: no active tab and no remembered coding tab.');
+    return { success: false, error: 'NO_CODING_TAB' };
+  }
+
+  console.log('Requesting hint capture from active tab fallback:', {
+    activeTabId,
+    url: tabs[0]?.url
+  });
+
+  try {
+    const capture = await chrome.tabs.sendMessage(activeTabId, { type: 'TRIGGER_CAPTURE' });
+    console.log('Hint capture fallback response:', capture);
+    return { success: !!capture?.success, tabId: activeTabId, capture };
+  } catch (err) {
+    console.error('Failed to trigger capture on active tab fallback:', err);
+    return { success: false, tabId: activeTabId, error: 'CAPTURE_TRIGGER_FAILED' };
   }
 }
 

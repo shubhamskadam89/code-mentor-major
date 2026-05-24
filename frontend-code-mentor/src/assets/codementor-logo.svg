@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background rounded square -->
+  <rect width="512" height="512" rx="110" fill="#2563EB"/>
+  <!-- > caret -->
+  <path d="M120 168 L224 256 L120 344" fill="none" stroke="white" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- _ underscore cursor -->
+  <rect x="248" y="314" width="148" height="46" rx="18" fill="white"/>
+</svg>

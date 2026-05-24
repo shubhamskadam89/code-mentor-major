@@ -30,6 +30,7 @@ export function AuthCallbackPage() {
 
       const token = params.get('token');
       const email = params.get('email');
+      const urlHandle = params.get('handle');
       const role  = (params.get('role')?.toLowerCase() ?? 'student') as 'student' | 'teacher';
 
       // Handle OAuth errors
@@ -46,8 +47,7 @@ export function AuthCallbackPage() {
         return;
       }
 
-      // Derive handle from email if not provided
-      const handle = email.split('@')[0];
+      const handle = urlHandle && urlHandle.trim() ? urlHandle.trim() : email.split('@')[0];
 
       // 1. Store in localStorage via AuthContext
       await login(handle, email, role, token);
