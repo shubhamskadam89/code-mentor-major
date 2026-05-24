@@ -1,0 +1,59 @@
+{
+  "manifest_version": 3,
+  "name": "AI Assist",
+  "version": "1.0.0",
+  "description": "A Chrome extension that provides AI-assisted code help and mentoring.",
+  "action": {
+    "default_title": "AI Assist",
+    "default_popup": "src/popup/popup.html"
+  },
+  "side_panel": {
+    "default_path": "src/popup/sidepanel.html"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "options_page": "src/dashboard/index.html",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.geeksforgeeks.org/*",
+        "https://leetcode.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "http://localhost:3000/*",
+        "https://app.codementor.com/*"
+      ],
+      "js": [
+        "contentSync.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "tabs",
+    "cookies",
+    "identity",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "http://localhost:8080/*"
+  ],
+  "oauth2": {
+    "client_id": "1020250980724-gslqc4p74oak32ouq2ona4kdedsai3ui.apps.googleusercontent.com",
+    "scopes": [
+      "profile",
+      "email"
+    ]
+  }
+}

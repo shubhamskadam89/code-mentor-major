@@ -1,0 +1,67 @@
+package com.example.aiassist.auth.security.oauth2;
+
+import com.example.aiassist.auth.dto.AuthResponse;
+import com.example.aiassist.auth.service.AuthService;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.stereotype.Component;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import java.io.IOException;
+
+@Component
+public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccessHandler {
+
+    private final AuthService authService;
+
+    @Value("${app.oauth2.redirect-uri:http://localhost:5173/src/dashboard/index.html}")
+    private String redirectUri;
+
+    public OAuth2AuthenticationSuccessHandler(AuthService authService) {
+        this.authService = authService;
+    }
+
+    @Override
+    public void onAuthenticationSuccess(HttpServletRequest request,
+                                        HttpServletResponse response,
+                                        Authentication authentication) throws IOException, ServletException {
+        OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
+
+        String email = oAuth2User.getAttribute("email");
+        if (email == null || email.isBlank()) {
+            response.sendRedirect(UriComponentsBuilder
+                    .fromUriString(redirectUri)
+                    .queryParam("error", "oauth2_email_not_provided")
+                    .build()
+                    .toUriString());
+            return;
+        }
+
+        String name = oAuth2User.getAttribute("name");
+        AuthResponse authResponse = authService.processOAuth2Login(email, name);
+
+        // Inject httpOnly token cookie
+        jakarta.servlet.http.Cookie cookie = new jakarta.servlet.http.Cookie("codementor_token", authResponse.getToken());
+        cookie.setHttpOnly(true);
+        cookie.setSecure(false);
+        cookie.setPath("/");
+        cookie.setMaxAge(86400); // 24 hours
+        response.addCookie(cookie);
+
+        String targetUrl = UriComponentsBuilder
+                .fromUriString(redirectUri)
+                .queryParam("token", authResponse.getToken())
+                .queryParam("email", authResponse.getEmail())
+                .queryParam("name", authResponse.getName())
+                .queryParam("role", authResponse.getRole())
+                .build()
+                .toUriString();
+
+        response.sendRedirect(targetUrl);
+    }
+}
