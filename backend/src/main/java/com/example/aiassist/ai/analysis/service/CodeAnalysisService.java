@@ -38,6 +38,9 @@ public class CodeAnalysisService {
     @Value("${gemini.api.key:none}")
     private String geminiApiKey;
 
+    @Value("${nvidia.api.key:none}")
+    private String nvidiaApiKey;
+
     public CodeAnalysisService(
             ProblemContextRepository contextRepository,
             CodeSnapshotRepository snapshotRepository,
@@ -84,8 +87,11 @@ public class CodeAnalysisService {
                 (request.getRawCode() != null ? request.getRawCode().length() : 0));
 
         try {
-            if ("GEMINI".equalsIgnoreCase(aiMode) || (geminiApiKey != null && !geminiApiKey.equals("none") && !geminiApiKey.isBlank())) {
-                log.info("[ANALYZE] Routing to Gemini API");
+            boolean hasGemini = (geminiApiKey != null && !geminiApiKey.equals("none") && !geminiApiKey.isBlank());
+            boolean hasNvidia = (nvidiaApiKey != null && !nvidiaApiKey.equals("none") && !nvidiaApiKey.isBlank());
+
+            if ("GEMINI".equalsIgnoreCase(aiMode) || "NEMOTRON".equalsIgnoreCase(aiMode) || hasGemini || hasNvidia) {
+                log.info("[ANALYZE] Routing to External Provider API");
                 hint = geminiService.generateHint(
                         context.getDescription(),
                         request.getRawCode(),

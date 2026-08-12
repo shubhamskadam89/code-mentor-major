@@ -22,6 +22,15 @@ public class GeminiService {
     @Value("${gemini.model:gemini-2.5-flash}")
     private String modelName;
 
+    @Value("${ai.provider:gemini}")
+    private String aiProvider;
+
+    @Value("${nvidia.api.key:none}")
+    private String nvidiaApiKey;
+
+    @Value("${nvidia.model:nvidia/llama-3.1-nemotron-70b-instruct}")
+    private String nvidiaModel;
+
     public String generateHint(
             String problem,
             String code,
@@ -36,8 +45,14 @@ public class GeminiService {
             throw new BadRequestException("Problem description cannot be empty");
         }
 
-        if (apiKey == null || apiKey.equals("none") || apiKey.isBlank()) {
-            throw new BadRequestException("Gemini API key is not configured");
+        if ("gemini".equalsIgnoreCase(aiProvider)) {
+            if (apiKey == null || apiKey.equals("none") || apiKey.isBlank()) {
+                throw new BadRequestException("Gemini API key is not configured");
+            }
+        } else if ("nemotron".equalsIgnoreCase(aiProvider)) {
+            if (nvidiaApiKey == null || nvidiaApiKey.equals("none") || nvidiaApiKey.isBlank()) {
+                throw new BadRequestException("Nvidia API key is not configured");
+            }
         }
 
         String level = (studentLevel != null && !studentLevel.isBlank()) ? studentLevel : "intermediate";
@@ -51,48 +66,93 @@ public class GeminiService {
                 hintDepth,
                 priorHintsOnProblem);
 
-        String url = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent?key=" + apiKey;
+        if ("nemotron".equalsIgnoreCase(aiProvider)) {
+            String url = "https://integrate.api.nvidia.com/v1/chat/completions";
 
-        Map<String, Object> textPart = Map.of("text", prompt);
-        Map<String, Object> parts = Map.of("parts", List.of(textPart));
-        Map<String, Object> contents = Map.of("contents", List.of(parts));
+            Map<String, Object> message = Map.of("role", "user", "content", prompt);
+            Map<String, Object> requestBody = Map.of(
+                    "model", nvidiaModel,
+                    "messages", List.of(message),
+                    "temperature", 0.5,
+                    "max_tokens", 120
+            );
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(nvidiaApiKey);
 
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(contents, headers);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-        try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
-            if (response.getBody() == null) {
-                throw new BadRequestException("Empty response from Gemini API");
+            try {
+                log.info("[NVIDIA] Sending request for model: {}", nvidiaModel);
+                ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+                if (response.getBody() == null) {
+                    throw new BadRequestException("Empty response from Nvidia API");
+                }
+
+                List choices = (List) response.getBody().get("choices");
+                if (choices == null || choices.isEmpty()) {
+                    throw new BadRequestException("No choices returned from Nvidia API");
+                }
+                Map choice = (Map) choices.get(0);
+                Map msg = (Map) choice.get("message");
+                if (msg == null) {
+                    throw new BadRequestException("No message returned from Nvidia API");
+                }
+                Object content = msg.get("content");
+                if (content == null) {
+                    throw new BadRequestException("Nvidia API returned empty content");
+                }
+
+                return content.toString();
+            } catch (Exception e) {
+                log.error("[NVIDIA ERROR] Exception details:", e);
+                throw new BadRequestException("Failed to communicate with Nvidia service: " + e.getMessage());
             }
+        } else {
+            String url = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent?key=" + apiKey;
 
-            List candidates = (List) response.getBody().get("candidates");
-            if (candidates == null || candidates.isEmpty()) {
-                throw new BadRequestException("No candidates returned from Gemini API");
-            }
-            Map candidate = (Map) candidates.get(0);
-            Map content = (Map) candidate.get("content");
-            if (content == null) {
-                throw new BadRequestException("No content returned from Gemini API");
-            }
-            List partsList = (List) content.get("parts");
-            if (partsList == null || partsList.isEmpty()) {
-                throw new BadRequestException("No parts returned from Gemini API");
-            }
-            Map part = (Map) partsList.get(0);
-            Object textResult = part.get("text");
+            Map<String, Object> textPart = Map.of("text", prompt);
+            Map<String, Object> parts = Map.of("parts", List.of(textPart));
+            Map<String, Object> contents = Map.of("contents", List.of(parts));
 
-            if (textResult == null) {
-                throw new BadRequestException("Gemini API returned empty text");
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(contents, headers);
+
+            try {
+                ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+                if (response.getBody() == null) {
+                    throw new BadRequestException("Empty response from Gemini API");
+                }
+
+                List candidates = (List) response.getBody().get("candidates");
+                if (candidates == null || candidates.isEmpty()) {
+                    throw new BadRequestException("No candidates returned from Gemini API");
+                }
+                Map candidate = (Map) candidates.get(0);
+                Map content = (Map) candidate.get("content");
+                if (content == null) {
+                    throw new BadRequestException("No content returned from Gemini API");
+                }
+                List partsList = (List) content.get("parts");
+                if (partsList == null || partsList.isEmpty()) {
+                    throw new BadRequestException("No parts returned from Gemini API");
+                }
+                Map part = (Map) partsList.get(0);
+                Object textResult = part.get("text");
+
+                if (textResult == null) {
+                    throw new BadRequestException("Gemini API returned empty text");
+                }
+
+                return textResult.toString();
+
+            } catch (Exception e) {
+                log.error("[GEMINI ERROR] Exception details:", e);
+                throw new BadRequestException("Failed to communicate with Gemini service: " + e.getMessage());
             }
-
-            return textResult.toString();
-
-        } catch (Exception e) {
-            log.error("[GEMINI ERROR] Exception details:", e);
-            throw new BadRequestException("Failed to communicate with Gemini service: " + e.getMessage());
         }
     }
 
