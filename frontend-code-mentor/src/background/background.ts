@@ -378,12 +378,8 @@ function handleCodeUpdate(data: any, tabId?: number) {
         chrome.tabs.sendMessage(tabId, {
           type: 'HINT_UPDATE',
           data: { ...response, hints: nextHints }
-        }, (result) => {
-          if (chrome.runtime.lastError) {
-            console.error('Error sending message to tab:', chrome.runtime.lastError.message);
-          } else {
-            console.log('Message sent successfully to tab, response:', result);
-          }
+        }).catch(err => {
+          console.warn('Could not send HINT_UPDATE to tab:', err.message);
         });
       } else {
         console.warn('Cannot send HINT_UPDATE: tabId is missing', { tabId, response });
