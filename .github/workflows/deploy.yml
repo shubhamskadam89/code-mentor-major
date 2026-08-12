@@ -24,13 +24,27 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script: |
-            # Navigate to project directory (clones it if not already present)
-            if [ ! -d "~/code-mentor-major" ]; then
-              git clone https://github.com/shubhamskadam89/code-mentor-major.git ~/code-mentor-major
-            fi
-            cd ~/code-mentor-major
+            # Define target dir
+            TARGET_DIR="$HOME/code-mentor-major"
             
-            # Fetch and reset to origin/main
+            # Check if it's a valid git repo. If not, clean it up but preserve any .env file!
+            if [ ! -d "$TARGET_DIR/.git" ]; then
+              echo "Directory does not exist or is not a git repo. Setting it up..."
+              if [ -f "$TARGET_DIR/backend/.env" ]; then
+                echo "Preserving existing .env file..."
+                cp "$TARGET_DIR/backend/.env" /tmp/backend_env_backup
+              fi
+              rm -rf "$TARGET_DIR"
+              git clone https://github.com/shubhamskadam89/code-mentor-major.git "$TARGET_DIR"
+              if [ -f /tmp/backend_env_backup ]; then
+                mkdir -p "$TARGET_DIR/backend"
+                mv /tmp/backend_env_backup "$TARGET_DIR/backend/.env"
+              fi
+            fi
+            
+            cd "$TARGET_DIR"
+            
+            # Fetch and reset to main
             git fetch origin main
             git reset --hard origin/main
             
