@@ -50,7 +50,8 @@
     "sidePanel"
   ],
   "host_permissions": [
-    "http://localhost:8080/*"
+    "http://localhost:8080/*",
+    "https://code-mentor.duckdns.org/*"
   ],
   "oauth2": {
     "client_id": "1020250980724-gslqc4p74oak32ouq2ona4kdedsai3ui.apps.googleusercontent.com",
