@@ -10,12 +10,12 @@ import com.example.aiassist.auth.security.JwtUtil;
 import com.example.aiassist.auth.service.AuthService;
 import com.example.aiassist.common.exception.BadRequestException;
 import com.example.aiassist.common.response.ApiResponse;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.ResponseCookie;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -31,25 +31,32 @@ public class AuthController {
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
 
-    @Value("${app.oauth2.redirect-uri:http://localhost:3000/#/auth/callback}")
+    @Value("${app.oauth2.redirect-uri}")
     private String redirectUri;
 
+    @Value("${app.cookie.secure:true}")
+    private boolean secureCookie;
+
     private void setTokenCookie(HttpServletResponse response, String token) {
-        Cookie cookie = new Cookie("codementor_token", token);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(false); // set to false for localhost/http development
-        cookie.setPath("/");
-        cookie.setMaxAge(86400); // 24 hours
-        response.addCookie(cookie);
+        ResponseCookie cookie = ResponseCookie.from("codementor_token", token)
+                .httpOnly(true)
+                .secure(secureCookie)
+                .sameSite(secureCookie ? "None" : "Lax")
+                .path("/")
+                .maxAge(86400)
+                .build();
+        response.addHeader("Set-Cookie", cookie.toString());
     }
 
     private void clearTokenCookie(HttpServletResponse response) {
-        Cookie cookie = new Cookie("codementor_token", null);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(false);
-        cookie.setPath("/");
-        cookie.setMaxAge(0);
-        response.addCookie(cookie);
+        ResponseCookie cookie = ResponseCookie.from("codementor_token", "")
+                .httpOnly(true)
+                .secure(secureCookie)
+                .sameSite(secureCookie ? "None" : "Lax")
+                .path("/")
+                .maxAge(0)
+                .build();
+        response.addHeader("Set-Cookie", cookie.toString());
     }
 
     @PostMapping("/register")

@@ -1,23 +1,21 @@
 package com.example.aiassist.ai.analysis.service;
 
 import com.example.aiassist.common.exception.BadRequestException;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.http.*;
-import org.springframework.beans.factory.annotation.Value;
 
+import java.util.List;
 import java.util.Map;
 
 @Service
-public class OllamaService {
+public class GeminiService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${ai.ollama.url:}")
-    private String url;
-
-    @Value("${ai.ollama.model:nemotron-3-super:cloud}")
-    private String model;
+    @Value("${gemini.api.key:none}")
+    private String apiKey;
 
     public String generateHint(
             String problem,
@@ -33,6 +31,10 @@ public class OllamaService {
             throw new BadRequestException("Problem description cannot be empty");
         }
 
+        if (apiKey == null || apiKey.equals("none") || apiKey.isBlank()) {
+            throw new BadRequestException("Gemini API key is not configured");
+        }
+
         String level = (studentLevel != null && !studentLevel.isBlank()) ? studentLevel : "intermediate";
         String prompt = buildPrompt(
                 problem,
@@ -44,39 +46,49 @@ public class OllamaService {
                 hintDepth,
                 priorHintsOnProblem);
 
-        Map<String, Object> requestBody = Map.of(
-                "model", model,
-                "prompt", prompt,
-                "stream", false
-        );
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+
+        Map<String, Object> textPart = Map.of("text", prompt);
+        Map<String, Object> parts = Map.of("parts", List.of(textPart));
+        Map<String, Object> contents = Map.of("contents", List.of(parts));
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<Map<String, Object>> entity =
-                new HttpEntity<>(requestBody, headers);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(contents, headers);
 
         try {
-            ResponseEntity<Map> response =
-                    restTemplate.postForEntity(url, entity, Map.class);
-
-            if (response.getBody() == null ||
-                !response.getBody().containsKey("response")) {
-                throw new BadRequestException("Invalid AI response format");
+            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+            if (response.getBody() == null) {
+                throw new BadRequestException("Empty response from Gemini API");
             }
 
-            Object result = response.getBody().get("response");
+            List candidates = (List) response.getBody().get("candidates");
+            if (candidates == null || candidates.isEmpty()) {
+                throw new BadRequestException("No candidates returned from Gemini API");
+            }
+            Map candidate = (Map) candidates.get(0);
+            Map content = (Map) candidate.get("content");
+            if (content == null) {
+                throw new BadRequestException("No content returned from Gemini API");
+            }
+            List partsList = (List) content.get("parts");
+            if (partsList == null || partsList.isEmpty()) {
+                throw new BadRequestException("No parts returned from Gemini API");
+            }
+            Map part = (Map) partsList.get(0);
+            Object textResult = part.get("text");
 
-            if (result == null) {
-                throw new BadRequestException("AI returned empty response");
+            if (textResult == null) {
+                throw new BadRequestException("Gemini API returned empty text");
             }
 
-            return result.toString();
+            return textResult.toString();
 
         } catch (Exception e) {
-            System.err.println("[OLLAMA ERROR] Exception details:");
+            System.err.println("[GEMINI ERROR] Exception details:");
             e.printStackTrace();
-            throw new BadRequestException("Failed to communicate with AI service: " + e.getMessage());
+            throw new BadRequestException("Failed to communicate with Gemini service: " + e.getMessage());
         }
     }
 

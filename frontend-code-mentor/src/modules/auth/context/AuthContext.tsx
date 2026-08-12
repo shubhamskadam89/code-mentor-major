@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getStorageItem, setStorageItem, clearStorageItems } from '../../../shared/lib/platform';
+import { apiPath } from '../../../shared/config';
 
 export interface UserSession {
   handle: string;
@@ -75,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           let role = storedRole as 'student' | 'teacher';
 
           try {
-            const meResponse = await fetch('http://localhost:8080/api/auth/me', {
+            const meResponse = await fetch(apiPath('auth/me'), {
               headers: { Authorization: `Bearer ${storedToken}` },
               credentials: 'include',
             });

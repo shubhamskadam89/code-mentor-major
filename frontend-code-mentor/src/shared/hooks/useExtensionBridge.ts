@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { clearStorageItems, getStorageItem, isExtensionEnvironment } from '../lib/platform';
+import { apiPath, apiUrl } from '../config';
 
 // ---------------------------------------------------------------------------
 // Auth types
@@ -91,7 +92,7 @@ export function useAuth(): AuthState & { logout: () => Promise<void> } {
 
   const logout = useCallback(async () => {
     try {
-      await fetch('http://localhost:8080/api/auth/logout', { method: 'POST', credentials: 'include' });
+      await fetch(apiPath('auth/logout'), { method: 'POST', credentials: 'include' });
     } catch { /* best-effort */ }
     await clearStorageItems([...AUTH_KEYS]);
     setToken(null);
@@ -111,7 +112,7 @@ export function useAuth(): AuthState & { logout: () => Promise<void> } {
 export async function apiGet<T>(path: string, token: string | null): Promise<T | null> {
   if (!token) return null;
   try {
-    const res = await fetch(`http://localhost:8080${path}`, {
+    const res = await fetch(apiUrl(path), {
       headers: { Authorization: `Bearer ${token}` },
       credentials: 'include',
     });

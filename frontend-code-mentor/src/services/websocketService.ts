@@ -1,4 +1,5 @@
 // WebSocket Service for CodeMentor - Placeholder for real-time features
+import { websocketUrl } from '../shared/config'
 
 export interface WebSocketMessage {
   type: string
@@ -49,7 +50,7 @@ class WebSocketService {
 
     try {
       // TODO: Replace with actual WebSocket endpoint
-      const wsUrl = 'ws://localhost:3001/ws'
+      const wsUrl = websocketUrl('/ws')
 
       console.log('Connecting to WebSocket:', wsUrl)
 

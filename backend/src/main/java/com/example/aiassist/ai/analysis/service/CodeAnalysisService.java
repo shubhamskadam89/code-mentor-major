@@ -13,6 +13,7 @@ import com.example.aiassist.problem.repository.ProblemContextRepository;
 import com.example.aiassist.student.entity.StudentProfile;
 import com.example.aiassist.student.repository.StudentProfileRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.Comparator;
 import java.util.List;
@@ -26,24 +27,42 @@ public class CodeAnalysisService {
     private final StudentProfileRepository studentProfileRepository;
     private final ProblemAttemptRepository attemptRepository;
     private final OllamaService ollamaService;
+    private final GeminiService geminiService;
+    private final RateLimiterService rateLimiterService;
+
+    @Value("${ai.mode:LLM}")
+    private String aiMode;
+
+    @Value("${gemini.api.key:none}")
+    private String geminiApiKey;
 
     public CodeAnalysisService(
             ProblemContextRepository contextRepository,
             CodeSnapshotRepository snapshotRepository,
             StudentProfileRepository studentProfileRepository,
             ProblemAttemptRepository attemptRepository,
-            OllamaService ollamaService) {
+            OllamaService ollamaService,
+            GeminiService geminiService,
+            RateLimiterService rateLimiterService) {
         this.contextRepository = contextRepository;
         this.snapshotRepository = snapshotRepository;
         this.studentProfileRepository = studentProfileRepository;
         this.attemptRepository = attemptRepository;
         this.ollamaService = ollamaService;
+        this.geminiService = geminiService;
+        this.rateLimiterService = rateLimiterService;
     }
 
     public CodeAnalysisResponse analyze(CodeAnalysisRequest request) {
         System.out.println("[ANALYZE] Received request: SessionId=" + request.getSessionId() +
                            ", ContextId=" + request.getProblemContextId() +
                            ", Language=" + request.getLanguage());
+
+        // Enforce rate limiting
+        String rateLimitId = (request.getHandle() != null && !request.getHandle().isBlank())
+                ? request.getHandle()
+                : request.getSessionId();
+        rateLimiterService.checkRateLimit(rateLimitId);
 
         ProblemContext context = contextRepository.findById(request.getProblemContextId())
                 .orElseThrow(() -> new ResourceNotFoundException("Problem context not found"));
@@ -60,23 +79,38 @@ public class CodeAnalysisService {
         AdaptiveHintContext adaptive = buildAdaptiveContext(request);
 
         String hint;
-        System.out.println("[ANALYZE] Calling Ollama with code length: " + 
+        System.out.println("[ANALYZE] Calling AI engine with code length: " + 
                            (request.getRawCode() != null ? request.getRawCode().length() : 0));
 
         try {
-            hint = ollamaService.generateHint(
-                    context.getDescription(),
-                    request.getRawCode(),
-                    adaptive.studentLevel(),
-                    adaptive.codeStatus(),
-                    adaptive.detailLevel(),
-                    adaptive.topicWeakness(),
-                    adaptive.hintDepth(),
-                    adaptive.priorHintsOnProblem()
-            );
-            System.out.println("[ANALYZE] Ollama returned hint: " + hint);
+            if ("GEMINI".equalsIgnoreCase(aiMode) || (geminiApiKey != null && !geminiApiKey.equals("none") && !geminiApiKey.isBlank())) {
+                System.out.println("[ANALYZE] Routing to Gemini API");
+                hint = geminiService.generateHint(
+                        context.getDescription(),
+                        request.getRawCode(),
+                        adaptive.studentLevel(),
+                        adaptive.codeStatus(),
+                        adaptive.detailLevel(),
+                        adaptive.topicWeakness(),
+                        adaptive.hintDepth(),
+                        adaptive.priorHintsOnProblem()
+                );
+            } else {
+                System.out.println("[ANALYZE] Routing to Ollama API");
+                hint = ollamaService.generateHint(
+                        context.getDescription(),
+                        request.getRawCode(),
+                        adaptive.studentLevel(),
+                        adaptive.codeStatus(),
+                        adaptive.detailLevel(),
+                        adaptive.topicWeakness(),
+                        adaptive.hintDepth(),
+                        adaptive.priorHintsOnProblem()
+                );
+            }
+            System.out.println("[ANALYZE] AI returned hint: " + hint);
         } catch (Exception e) {
-            System.err.println("[ANALYZE] Ollama failed: " + e.getMessage());
+            System.err.println("[ANALYZE] AI engine failed: " + e.getMessage());
             throw new BadRequestException("AI engine unavailable");
         }
 

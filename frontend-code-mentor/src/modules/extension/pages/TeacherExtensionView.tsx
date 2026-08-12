@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../../shared/hooks/useExtensionBridge';
 import logoMark from '../../../assets/codementor-logo.svg';
+import { apiV1Path, appUrl } from '../../../shared/config';
 
 export function TeacherExtensionView() {
   const { isAuth, email, logout, loading: authLoading } = useAuth();
@@ -32,7 +33,7 @@ export function TeacherExtensionView() {
     }
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:8080/api/v1/dashboard/teacher/summary?email=${email}`);
+      const res = await fetch(apiV1Path(`dashboard/teacher/summary?email=${email}`));
       if (res.ok) {
         const data = await res.json();
         setSummary(data);
@@ -242,7 +243,7 @@ export function TeacherExtensionView() {
           <h3 className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Quick Actions</h3>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <a
-              href="http://localhost:3000/#/teacher/assignments"
+              href={appUrl('teacher/assignments')}
               target="_blank"
               rel="noreferrer"
               className="flex items-center space-x-2 p-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 rounded-xl font-bold transition text-left text-zinc-700 dark:text-zinc-300 shadow-sm"
@@ -251,7 +252,7 @@ export function TeacherExtensionView() {
               <span>New Assignment</span>
             </a>
             <a
-              href="http://localhost:3000/#/teacher/classrooms"
+              href={appUrl('teacher/classrooms')}
               target="_blank"
               rel="noreferrer"
               className="flex items-center space-x-2 p-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 rounded-xl font-bold transition text-left text-zinc-700 dark:text-zinc-300 shadow-sm"
@@ -282,7 +283,7 @@ export function TeacherExtensionView() {
       <div className="p-3 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 text-[10px] font-semibold text-zinc-400 flex items-center justify-between shrink-0">
         <span>Instructor Session</span>
         <a
-          href="http://localhost:3000/#/teacher/dashboard"
+          href={appUrl('teacher/dashboard')}
           target="_blank"
           rel="noreferrer"
           className="hover:text-zinc-600 dark:hover:text-zinc-200 flex items-center space-x-1"

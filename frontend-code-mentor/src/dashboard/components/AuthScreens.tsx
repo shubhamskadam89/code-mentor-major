@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Mail, Lock, User as UserIcon, ArrowRight, Github, Code2 } from 'lucide-react'
 import { useAuth } from '../../modules/auth/context/AuthContext'
+import { apiPath, apiUrl } from '../../shared/config'
 
 interface AuthScreensProps {
     onLoginSuccess: (handle: string, role: string) => void;
@@ -22,8 +23,8 @@ export function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
 
         try {
             const url = isLogin
-                ? 'http://localhost:8080/api/auth/login'
-                : 'http://localhost:8080/api/auth/register';
+                ? apiPath('auth/login')
+                : apiPath('auth/register');
 
             const payload = isLogin
                 ? { email, password }
@@ -66,7 +67,7 @@ export function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
         
         if (typeof chrome === 'undefined' || !chrome.identity || !chrome.identity.getAuthToken) {
             // Redirect web app directly to Spring Boot OAuth2 endpoint
-            window.location.href = 'http://localhost:8080/oauth2/authorization/google';
+            window.location.href = apiUrl('oauth2/authorization/google');
             return;
         }
 
@@ -77,7 +78,7 @@ export function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
                 return;
             }
             try {
-                const res = await fetch('http://localhost:8080/api/auth/google', {
+                const res = await fetch(apiPath('auth/google'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

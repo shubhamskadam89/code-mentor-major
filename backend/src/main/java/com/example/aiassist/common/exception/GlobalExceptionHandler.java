@@ -65,4 +65,17 @@ public class GlobalExceptionHandler {
                         request.getRequestURI()
                 ));
     }
+
+    @ExceptionHandler(RateLimitException.class)
+    public ResponseEntity<ErrorResponse> handleRateLimit(
+            RateLimitException ex,
+            HttpServletRequest request) {
+
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(new ErrorResponse(
+                        429,
+                        ex.getMessage(),
+                        request.getRequestURI()
+                ));
+    }
 }

@@ -10,6 +10,7 @@ export default defineConfig({
     outDir: 'dist',
     rollupOptions: {
       input: {
+        index: resolve(__dirname, 'index.html'),
         popup: resolve(__dirname, 'src/popup/popup.html'),
         sidepanel: resolve(__dirname, 'src/popup/sidepanel.html'),
         content: resolve(__dirname, 'src/content/contentScript.ts'),
