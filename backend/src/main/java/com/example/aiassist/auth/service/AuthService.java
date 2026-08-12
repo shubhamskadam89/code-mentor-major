@@ -230,71 +230,7 @@ public class AuthService {
 
     @Transactional
     public void ensureDefaultClassroomAndMockStudents() {
-        // 1. Ensure default teacher
-        Teacher teacher = teacherRepository.findByEmail("teacher@example.com")
-            .orElseGet(() -> teacherRepository.save(new Teacher("Dr. Elizabeth Vance", "teacher@example.com", "Computer Science")));
-        
-        if (!userRepository.existsByEmail("teacher@example.com")) {
-            userRepository.save(User.builder()
-                .name("Dr. Elizabeth Vance")
-                .email("teacher@example.com")
-                .password(passwordEncoder.encode("password"))
-                .role(User.Role.TEACHER)
-                .build());
-        }
-
-        // 2. Ensure default classroom CS401X
-        Classroom classroom = classroomRepository.findByJoinCode("CS401X")
-            .orElseGet(() -> classroomRepository.save(new Classroom("CS401 - Data Structures & Algorithms II", "CS401X", teacher)));
-
-        // 3. Ensure mock students and their attempts
-        String[] mockNames = {"Alice Chen", "David Miller", "Sarah Jenkins", "Michael Chang"};
-        String[] mockHandles = {"alice_chen", "david_miller", "sarah_jenkins", "michael_chang"};
-        int[] activeDays = {120, 110, 95, 80};
-        int[] maxStreaks = {15, 10, 8, 6};
-        int[] currentStreaks = {12, 4, 3, 0};
-        double[] avgScores = {92.0, 85.0, 88.0, 79.0};
-        int[] solvedCounts = {315, 289, 245, 210};
-
-        boolean classroomUpdated = false;
-        for (int i = 0; i < mockNames.length; i++) {
-            final String handle = mockHandles[i];
-            final String name = mockNames[i];
-            final int activeD = activeDays[i];
-            final int maxS = maxStreaks[i];
-            final int currS = currentStreaks[i];
-            final double avgSc = avgScores[i];
-            final int solvedCount = solvedCounts[i];
-            
-            StudentProfile mockSp = studentProfileRepository.findByHandle(handle)
-                .orElseGet(() -> studentProfileRepository.save(new StudentProfile(name, handle, activeD, maxS, currS, 12, avgSc)));
-            
-            // Seed attempts for mock student if none exist
-            if (problemAttemptRepository.findByStudentProfileId(mockSp.getId()).isEmpty()) {
-                List<ProblemAttempt> attemptsToSave = new ArrayList<>();
-                int easyLimit = (int)(solvedCount * 0.45);
-                int medLimit = (int)(solvedCount * 0.40);
-                
-                for (int j = 0; j < solvedCount; j++) {
-                    String diff = "Easy";
-                    if (j >= easyLimit && j < easyLimit + medLimit) {
-                        diff = "Medium";
-                    } else if (j >= easyLimit + medLimit) {
-                        diff = "Hard";
-                    }
-                    attemptsToSave.add(new ProblemAttempt(mockSp, Platform.LEETCODE, "leetcode_" + j, diff, 0, true, LocalDateTime.now().minusDays(j % 30)));
-                }
-                problemAttemptRepository.saveAll(attemptsToSave);
-            }
-
-            if (classroom.getStudents().stream().noneMatch(s -> s.getHandle().equals(handle))) {
-                classroom.getStudents().add(mockSp);
-                classroomUpdated = true;
-            }
-        }
-        if (classroomUpdated) {
-            classroomRepository.save(classroom);
-        }
+        // No seeding in production
     }
 
     private AuthResponse buildResponse(User user, String token) {

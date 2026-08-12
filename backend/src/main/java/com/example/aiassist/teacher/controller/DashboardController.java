@@ -112,75 +112,13 @@ public class DashboardController {
                 StudentProfile profile = profileOpt.get();
 
                 List<Classroom> classrooms = classroomRepository.findByStudentId(profile.getId());
-                if (classrooms.isEmpty()) {
-                        Optional<Classroom> defaultClassOpt = classroomRepository.findByJoinCode("CS401X");
-                        if (defaultClassOpt.isPresent()) {
-                                Classroom defaultClassroom = defaultClassOpt.get();
-                                defaultClassroom.getStudents().add(profile);
-                                classroomRepository.save(defaultClassroom);
-                                classrooms = List.of(defaultClassroom);
-                        }
-                }
 
                 List<Long> classroomIds = classrooms.stream().map(Classroom::getId).toList();
                 List<Assignment> dbAssignments = classroomIds.isEmpty()
                                 ? Collections.emptyList()
                                 : assignmentRepository.findByClassroomIdIn(classroomIds);
 
-                if (dbAssignments.isEmpty() && !classrooms.isEmpty()) {
-                        Classroom classroom = classrooms.get(0);
-                        dbAssignments = new ArrayList<>();
 
-                        // Assignment 1: Advanced Graph Algorithms (with 2 problems)
-                        Assignment a1 = new Assignment();
-                        a1.setClassroom(classroom);
-                        a1.setTitle("Advanced Graph Algorithms");
-                        a1.setCategory("DSA Assignments");
-                        a1.setCreatedAt(LocalDateTime.now().minusDays(2));
-                        a1.setDueDate(LocalDateTime.now().plusDays(1)); // Tomorrow
-                        a1.setProblems(List.of(
-                                new AssignmentProblem("two-sum", "LEETCODE", "Two Sum", "Easy"),
-                                new AssignmentProblem("add-two-numbers", "LEETCODE", "Add Two Numbers", "Medium")
-                        ));
-                        dbAssignments.add(assignmentRepository.save(a1));
-
-                        // Assignment 2: Dynamic Programming Challenge (with 1 problem)
-                        Assignment a2 = new Assignment();
-                        a2.setClassroom(classroom);
-                        a2.setTitle("Dynamic Programming Challenge");
-                        a2.setCategory("DSA Assignments");
-                        a2.setCreatedAt(LocalDateTime.now().minusDays(1));
-                        a2.setDueDate(LocalDateTime.now().plusDays(3)); // Friday
-                        a2.setProblems(List.of(
-                                new AssignmentProblem("chef-and-queries", "CODECHEF", "Chef and Queries", "Hard")
-                        ));
-                        dbAssignments.add(assignmentRepository.save(a2));
-
-                        // Assignment 3: Sorting & Searching Fundamentals (with 2 problems)
-                        Assignment a3 = new Assignment();
-                        a3.setClassroom(classroom);
-                        a3.setTitle("Sorting & Searching Fundamentals");
-                        a3.setCategory("Fundamentals");
-                        a3.setCreatedAt(LocalDateTime.now().minusDays(10));
-                        a3.setDueDate(LocalDateTime.now().minusDays(3)); // Last Week
-                        a3.setProblems(List.of(
-                                new AssignmentProblem("find-duplicates-in-array", "GEEKSFORGEEKS", "Find Duplicates in Array", "Easy"),
-                                new AssignmentProblem("reverse-a-linked-list", "GEEKSFORGEEKS", "Reverse a Linked List", "Easy")
-                        ));
-                        dbAssignments.add(assignmentRepository.save(a3));
-
-                        // Assignment 4: Intro to System Design (with 1 problem)
-                        Assignment a4 = new Assignment();
-                        a4.setClassroom(classroom);
-                        a4.setTitle("Intro to System Design");
-                        a4.setCategory("Fundamentals");
-                        a4.setCreatedAt(LocalDateTime.now().minusDays(30));
-                        a4.setDueDate(LocalDateTime.now().minusDays(15)); // Oct 15 / past
-                        a4.setProblems(List.of(
-                                new AssignmentProblem("dynamic-array", "HACKERRANK", "Dynamic Array", "Medium")
-                        ));
-                        dbAssignments.add(assignmentRepository.save(a4));
-                }
 
                 List<ProblemAttempt> attempts = problemAttemptRepository.findByStudentProfileId(profile.getId());
                 List<Map<String, Object>> response = new ArrayList<>();
@@ -309,15 +247,7 @@ public class DashboardController {
 
                 List<Classroom> classrooms = classroomRepository.findByStudentId(profile.getId());
                 if (classrooms.isEmpty()) {
-                        Optional<Classroom> defaultClassOpt = classroomRepository.findByJoinCode("CS401X");
-                        if (defaultClassOpt.isPresent()) {
-                                Classroom defaultClassroom = defaultClassOpt.get();
-                                defaultClassroom.getStudents().add(profile);
-                                classroomRepository.save(defaultClassroom);
-                                classrooms = List.of(defaultClassroom);
-                        } else {
-                                return ResponseEntity.ok(Collections.emptyList());
-                        }
+                        return ResponseEntity.ok(Collections.emptyList());
                 }
 
                 Set<StudentProfile> allStudents = new HashSet<>();
@@ -330,26 +260,9 @@ public class DashboardController {
                         List<ProblemAttempt> attempts = problemAttemptRepository.findByStudentProfileId(sp.getId());
                         long solved = attempts.stream().filter(ProblemAttempt::isCompleted).count();
 
-                        if (solved == 0 && sp.getHandle().contains("_")) {
-                                solved = 200;
-                        }
-
                         long score = solved * 10;
-
                         String trend = "same";
-                        if (sp.getHandle().equals("alice_chen") || sp.getHandle().equals("michael_chang") || sp.getHandle().equals(profile.getHandle())) {
-                                trend = "up";
-                        } else if (sp.getHandle().equals("david_miller") || sp.getHandle().equals("james_wilson")) {
-                                trend = "down";
-                        }
-
                         String avatar = "🦊";
-                        if (sp.getHandle().equals("alice_chen")) avatar = "🐼";
-                        else if (sp.getHandle().equals("david_miller")) avatar = "🦁";
-                        else if (sp.getHandle().equals("sarah_jenkins")) avatar = "🐨";
-                        else if (sp.getHandle().equals("michael_chang")) avatar = "🐯";
-                        else if (sp.getHandle().equals("elena_rodriguez")) avatar = "🐰";
-                        else if (sp.getHandle().equals("james_wilson")) avatar = "🐻";
 
                         double rating = 3.5 + Math.min(1.5, (solved / 350.0) * 1.5);
                         rating = Math.round(rating * 10.0) / 10.0;
