@@ -1,6 +1,7 @@
 package com.example.aiassist.ai.analysis.service;
 
 import com.example.aiassist.common.exception.BadRequestException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -9,6 +10,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
 public class GeminiService {
 
@@ -16,6 +18,9 @@ public class GeminiService {
 
     @Value("${gemini.api.key:none}")
     private String apiKey;
+
+    @Value("${gemini.model:gemini-2.5-flash}")
+    private String modelName;
 
     public String generateHint(
             String problem,
@@ -46,7 +51,7 @@ public class GeminiService {
                 hintDepth,
                 priorHintsOnProblem);
 
-        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent?key=" + apiKey;
 
         Map<String, Object> textPart = Map.of("text", prompt);
         Map<String, Object> parts = Map.of("parts", List.of(textPart));
@@ -86,8 +91,7 @@ public class GeminiService {
             return textResult.toString();
 
         } catch (Exception e) {
-            System.err.println("[GEMINI ERROR] Exception details:");
-            e.printStackTrace();
+            log.error("[GEMINI ERROR] Exception details:", e);
             throw new BadRequestException("Failed to communicate with Gemini service: " + e.getMessage());
         }
     }
