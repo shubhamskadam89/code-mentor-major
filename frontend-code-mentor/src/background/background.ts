@@ -389,8 +389,46 @@ function handleCodeUpdate(data: any, tabId?: number) {
       } else {
         console.warn('Cannot send HINT_UPDATE: tabId is missing', { tabId, response });
       }
-    }).catch(err => {
+    }).catch(async (err: Error) => {
       console.error('Error in analyzeCode promise chain:', err);
+
+      const errMsg = err?.message || '';
+      const isStaleContext = errMsg.includes('404') || errMsg.includes('400') || errMsg.includes('Problem context not found');
+
+      if (isStaleContext) {
+        console.warn('[CodeMentor] Stale problemContextId detected for key:', key, '— clearing cache and re-detecting problem.');
+
+        // 1. Remove only this key from the context map so re-detection fires next time
+        chrome.storage.local.get(['problemContextMap'], (fresh) => {
+          const freshMap = fresh.problemContextMap || {};
+          delete freshMap[key];
+          chrome.storage.local.set({ problemContextMap: freshMap });
+          console.log('[CodeMentor] Cleared stale context for:', key);
+        });
+
+        // 2. Notify the popup with a user-friendly message
+        const errorHintPayload = {
+          hints: [{
+            id: Date.now(),
+            type: 'logic',
+            message: 'HINT: Problem context was stale — refreshing. Please click "Get Hint" again in a moment.',
+            severity: 'low',
+            timestamp: Date.now()
+          }],
+          score: 0,
+          suggestions: [],
+          complexity: ''
+        };
+
+        chrome.runtime.sendMessage({
+          type: 'HINT_UPDATE',
+          data: errorHintPayload
+        }).catch(() => {});
+
+        if (tabId !== undefined && tabId !== null) {
+          chrome.tabs.sendMessage(tabId, { type: 'HINT_UPDATE', data: errorHintPayload }).catch(() => {});
+        }
+      }
     });
     });
   });
