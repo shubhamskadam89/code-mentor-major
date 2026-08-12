@@ -30,7 +30,9 @@
     {
       "matches": [
         "http://localhost:3000/*",
-        "https://app.codementor.com/*"
+        "https://app.codementor.com/*",
+        "https://code-mentor-major.vercel.app/*",
+        "https://*.vercel.app/*"
       ],
       "js": [
         "contentSync.js"
