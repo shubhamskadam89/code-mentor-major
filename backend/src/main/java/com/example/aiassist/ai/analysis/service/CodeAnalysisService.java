@@ -14,11 +14,13 @@ import com.example.aiassist.student.entity.StudentProfile;
 import com.example.aiassist.student.repository.StudentProfileRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 public class CodeAnalysisService {
 
@@ -54,9 +56,8 @@ public class CodeAnalysisService {
     }
 
     public CodeAnalysisResponse analyze(CodeAnalysisRequest request) {
-        System.out.println("[ANALYZE] Received request: SessionId=" + request.getSessionId() +
-                           ", ContextId=" + request.getProblemContextId() +
-                           ", Language=" + request.getLanguage());
+        log.info("[ANALYZE] Received request: SessionId={}, ContextId={}, Language={}", 
+                request.getSessionId(), request.getProblemContextId(), request.getLanguage());
 
         // Enforce rate limiting
         String rateLimitId = (request.getHandle() != null && !request.getHandle().isBlank())
@@ -67,7 +68,7 @@ public class CodeAnalysisService {
         ProblemContext context = contextRepository.findById(request.getProblemContextId())
                 .orElseThrow(() -> new ResourceNotFoundException("Problem context not found"));
 
-        System.out.println("[ANALYZE] Found Context: Title=" + context.getTitle());
+        log.info("[ANALYZE] Found Context: Title={}", context.getTitle());
 
         snapshotRepository.save(new CodeSnapshot(
                 request.getSessionId(),
@@ -79,12 +80,12 @@ public class CodeAnalysisService {
         AdaptiveHintContext adaptive = buildAdaptiveContext(request);
 
         String hint;
-        System.out.println("[ANALYZE] Calling AI engine with code length: " + 
-                           (request.getRawCode() != null ? request.getRawCode().length() : 0));
+        log.info("[ANALYZE] Calling AI engine with code length: {}", 
+                (request.getRawCode() != null ? request.getRawCode().length() : 0));
 
         try {
             if ("GEMINI".equalsIgnoreCase(aiMode) || (geminiApiKey != null && !geminiApiKey.equals("none") && !geminiApiKey.isBlank())) {
-                System.out.println("[ANALYZE] Routing to Gemini API");
+                log.info("[ANALYZE] Routing to Gemini API");
                 hint = geminiService.generateHint(
                         context.getDescription(),
                         request.getRawCode(),
@@ -96,7 +97,7 @@ public class CodeAnalysisService {
                         adaptive.priorHintsOnProblem()
                 );
             } else {
-                System.out.println("[ANALYZE] Routing to Ollama API");
+                log.info("[ANALYZE] Routing to Ollama API");
                 hint = ollamaService.generateHint(
                         context.getDescription(),
                         request.getRawCode(),
@@ -108,9 +109,9 @@ public class CodeAnalysisService {
                         adaptive.priorHintsOnProblem()
                 );
             }
-            System.out.println("[ANALYZE] AI returned hint: " + hint);
+            log.info("[ANALYZE] AI returned hint: {}", hint);
         } catch (Exception e) {
-            System.err.println("[ANALYZE] AI engine failed: " + e.getMessage());
+            log.error("[ANALYZE] AI engine failed: {}", e.getMessage(), e);
             throw new BadRequestException("AI engine unavailable");
         }
 

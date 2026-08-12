@@ -7,12 +7,14 @@ import com.example.aiassist.ai.classification.dto.ClassificationStatus;
 import com.example.aiassist.problem.dto.ProblemDetectionRequest;
 import com.example.aiassist.problem.dto.ProblemDetectionResponse;
 import com.example.aiassist.problem.repository.ProblemContextRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+@Slf4j
 @Service
 public class ProblemDetectionService {
 
@@ -27,12 +29,11 @@ public class ProblemDetectionService {
 
     public ProblemDetectionResponse detect(ProblemDetectionRequest request) {
 
-        System.out.println("[DETECT] Received request: Title=" + request.getTitle() + 
-                           ", Platform=" + request.getPlatform() + 
-                           ", URL=" + request.getUrl());
-        System.out.println("[DETECT] Description (first 100 chars): " + 
-                           (request.getDescription() != null && request.getDescription().length() > 100 ? 
-                            request.getDescription().substring(0, 100) : request.getDescription()));
+        log.info("[DETECT] Received request: Title={}, Platform={}, URL={}", 
+                request.getTitle(), request.getPlatform(), request.getUrl());
+        log.info("[DETECT] Description (first 100 chars): {}", 
+                (request.getDescription() != null && request.getDescription().length() > 100 ? 
+                 request.getDescription().substring(0, 100) : request.getDescription()));
 
         ProblemContext context = new ProblemContext(
                 request.getPlatform(),

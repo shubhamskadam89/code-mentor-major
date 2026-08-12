@@ -1,6 +1,7 @@
 package com.example.aiassist.ai.analysis.service;
 
 import com.example.aiassist.common.exception.BadRequestException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.*;
@@ -8,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 
 import java.util.Map;
 
+@Slf4j
 @Service
 public class OllamaService {
 
@@ -74,8 +76,7 @@ public class OllamaService {
             return result.toString();
 
         } catch (Exception e) {
-            System.err.println("[OLLAMA ERROR] Exception details:");
-            e.printStackTrace();
+            log.error("[OLLAMA ERROR] Exception details:", e);
             throw new BadRequestException("Failed to communicate with AI service: " + e.getMessage());
         }
     }
