@@ -12,10 +12,12 @@ import com.example.aiassist.problem.repository.ProblemAttemptRepository;
 import com.example.aiassist.student.entity.StudentProfile;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
 @Service
+@Transactional
 public class TeacherService {
 
     private final TeacherRepository teacherRepository;
