@@ -9,10 +9,12 @@ import com.example.aiassist.student.entity.StudentProfile;
 import com.example.aiassist.student.repository.StudentProfileRepository;
 import com.example.aiassist.problem.entity.ProblemAttempt;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
+@Transactional
 public class StudentService {
 
     private final StudentProfileRepository studentProfileRepository;

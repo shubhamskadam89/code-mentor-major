@@ -16,6 +16,7 @@ import com.example.aiassist.core.platform.Platform;
 import java.time.LocalDateTime;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v1/dashboard")
 @CrossOrigin(origins = "*") // Allows extension frontend to hit this API easily
+@Transactional
 public class DashboardController {
 
         private final StudentProfileRepository studentProfileRepository;
