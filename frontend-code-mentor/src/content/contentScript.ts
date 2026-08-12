@@ -554,7 +554,8 @@ class CodeCaptureService {
           url: this.getPageUrl(), // Use top page URL for context mapping, including editor frames
           language: this.detectLanguage(),
           rawCode: code,
-          signalVector: signals
+          signalVector: signals,
+          isManual: force
         }
       });
 

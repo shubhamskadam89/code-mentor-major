@@ -311,9 +311,14 @@ function handleProblemCapture(data: any, tabId?: number) {
 }
 
 function handleCodeUpdate(data: any, tabId?: number) {
-  // data should contain { sessionId, language, rawCode, signalVector, url }
+  // data should contain { sessionId, language, rawCode, signalVector, url, isManual }
   console.log('Code update captured:', data);
   rememberCodingTab(tabId, data?.url);
+
+  if (!data.isManual) {
+    console.log('CodeMentor: skipping automatic AI analysis to prevent API exhaustion.');
+    return;
+  }
 
   chrome.storage.local.get(['problemContextMap'], (result) => {
     const map = result.problemContextMap || {};
