@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -19,8 +20,11 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
 
     private final AuthService authService;
 
-    @Value("${app.oauth2.redirect-uri:http://localhost:5173/src/dashboard/index.html}")
+    @Value("${app.oauth2.redirect-uri}")
     private String redirectUri;
+
+    @Value("${app.cookie.secure:true}")
+    private boolean secureCookie;
 
     public OAuth2AuthenticationSuccessHandler(AuthService authService) {
         this.authService = authService;
@@ -45,13 +49,14 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         String name = oAuth2User.getAttribute("name");
         AuthResponse authResponse = authService.processOAuth2Login(email, name);
 
-        // Inject httpOnly token cookie
-        jakarta.servlet.http.Cookie cookie = new jakarta.servlet.http.Cookie("codementor_token", authResponse.getToken());
-        cookie.setHttpOnly(true);
-        cookie.setSecure(false);
-        cookie.setPath("/");
-        cookie.setMaxAge(86400); // 24 hours
-        response.addCookie(cookie);
+        ResponseCookie cookie = ResponseCookie.from("codementor_token", authResponse.getToken())
+                .httpOnly(true)
+                .secure(secureCookie)
+                .sameSite(secureCookie ? "None" : "Lax")
+                .path("/")
+                .maxAge(86400)
+                .build();
+        response.addHeader("Set-Cookie", cookie.toString());
 
         String targetUrl = UriComponentsBuilder
                 .fromUriString(redirectUri)

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import logoMark from '../assets/codementor-logo.svg';
 import navbarDark from '../assets/codementor-navbar-dark.svg';
+import { apiPath, appUrl } from '../shared/config';
 
 interface AssignmentContext {
   title: string;
@@ -64,7 +65,7 @@ const App: React.FC = () => {
   }, []);
 
   const handleSignInRedirect = () => {
-    chrome.tabs.create({ url: 'http://localhost:3000' });
+    chrome.tabs.create({ url: appUrl() });
   };
 
   const handleOpenSidepanel = () => {
@@ -83,7 +84,7 @@ const App: React.FC = () => {
   const handleLogout = async () => {
     try {
       // Call backend logout
-      await fetch('http://localhost:8080/api/auth/logout', { method: 'POST' }).catch(() => { });
+      await fetch(apiPath('auth/logout'), { method: 'POST' }).catch(() => { });
     } catch { }
 
     chrome.storage.local.remove([
@@ -233,7 +234,7 @@ const App: React.FC = () => {
       <footer className="p-3 bg-zinc-900/30 border-t border-zinc-900 text-[9px] font-bold text-zinc-500 flex items-center justify-between shrink-0 z-10">
         <span>v1.0.0</span>
         <a
-          href={`http://localhost:3000/#/${role}/dashboard`}
+          href={appUrl(`${role}/dashboard`)}
           target="_blank"
           rel="noreferrer"
           className="hover:text-zinc-300 flex items-center space-x-1.5"

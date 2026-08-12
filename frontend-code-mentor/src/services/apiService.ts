@@ -33,6 +33,7 @@ export interface ProblemInfo {
 }
 
 import { ExtractedProblem, CodeUpdateRequest, SignalVector } from '../types/problem'
+import { API_BASE_URL, websocketUrl } from '../shared/config'
 
 // Legacy types being kept for backward compatibility if needed, 
 // but SignalVector is now imported.
@@ -52,7 +53,7 @@ export interface CodeAnalysis {
 }
 
 class ApiService {
-  private baseUrl: string = 'http://localhost:8080/api'
+  private baseUrl: string = API_BASE_URL
   // private apiKey: string | null = null
 
   constructor() {
@@ -309,7 +310,7 @@ class ApiService {
   async connectWebSocket(): Promise<WebSocket | null> {
     try {
       // TODO: Replace with actual WebSocket endpoint
-      const wsUrl = 'ws://localhost:3001/ws'
+      const wsUrl = websocketUrl('/ws')
 
       console.log('Connecting to WebSocket:', wsUrl)
 

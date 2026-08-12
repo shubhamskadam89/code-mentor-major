@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
+import { API_V1_BASE_URL } from '../config';
 
-const BASE_URL = 'http://localhost:8080/api/v1';
+const BASE_URL = API_V1_BASE_URL;
 
 export interface SubmissionItem {
   id: number;

@@ -1,4 +1,6 @@
-const BASE_URL = 'http://localhost:8080/api/v1';
+import { API_V1_BASE_URL } from '../shared/config';
+
+const BASE_URL = API_V1_BASE_URL;
 
 export interface Classroom {
   id: number;

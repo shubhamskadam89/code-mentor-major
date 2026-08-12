@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - AI_MODE=${AI_MODE:-GEMINI}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - CORS_ALLOWED_ORIGIN_PATTERNS=${CORS_ALLOWED_ORIGIN_PATTERNS:-*}
+      - JWT_SECRET=${JWT_SECRET:-CodeMentorSecretKeyForJWTSigning2024CollegeEdition!!}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-86400000}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-dummy-id}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-dummy-secret}
+      - APP_RATE_LIMIT_ENABLED=${APP_RATE_LIMIT_ENABLED:-true}
+      - APP_RATE_LIMIT_COOLDOWN_SECONDS=${APP_RATE_LIMIT_COOLDOWN_SECONDS:-120}
+    restart: unless-stopped

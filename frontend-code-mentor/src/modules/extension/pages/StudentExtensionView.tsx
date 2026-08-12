@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuth, apiGet } from '../../../shared/hooks/useExtensionBridge';
 import logoMark from '../../../assets/codementor-logo.svg';
+import { appUrl } from '../../../shared/config';
 
 // ─────────────────────────────────────────────
 // Types (matching what the backend actually returns)
@@ -411,7 +412,7 @@ export function StudentExtensionView() {
                   </button>
 
                   <a
-                    href="http://localhost:3000/#/student/dashboard"
+                    href={appUrl('student/dashboard')}
                     target="_blank"
                     rel="noreferrer"
                     className="w-full flex items-center justify-center space-x-1.5 py-2.5 text-xs font-bold text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl transition bg-zinc-50/50 dark:bg-zinc-900/30"
@@ -641,7 +642,7 @@ export function StudentExtensionView() {
                   <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Links</h3>
                   <div className="space-y-2">
                     <a
-                      href="http://localhost:3000/#/student/dashboard"
+                      href={appUrl('student/dashboard')}
                       target="_blank"
                       rel="noreferrer"
                       className="flex items-center justify-between text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:text-orange-500 transition"
@@ -650,7 +651,7 @@ export function StudentExtensionView() {
                       <ExternalLink className="w-3.5 h-3.5" />
                     </a>
                     <a
-                      href="http://localhost:3000/#/student/assignments"
+                      href={appUrl('student/assignments')}
                       target="_blank"
                       rel="noreferrer"
                       className="flex items-center justify-between text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:text-orange-500 transition"
@@ -671,7 +672,7 @@ export function StudentExtensionView() {
       <div className="p-3 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 text-[10px] font-semibold text-zinc-400 flex items-center justify-between shrink-0">
         <span>v1.0.0</span>
         <a
-          href="http://localhost:3000/#/student/dashboard"
+          href={appUrl('student/dashboard')}
           target="_blank"
           rel="noreferrer"
           className="hover:text-zinc-600 dark:hover:text-zinc-200 flex items-center space-x-1"

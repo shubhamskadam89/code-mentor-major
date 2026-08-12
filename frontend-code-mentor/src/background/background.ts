@@ -1,5 +1,6 @@
 // Background service worker for CodeMentor extension
 import { apiService } from '../services/apiService'
+import { apiV1Path } from '../shared/config'
 console.log('CodeMentor background script loaded');
 
 let latestCodingTabId: number | undefined;
@@ -148,7 +149,7 @@ async function checkProblemAssignment(problemId: string) {
     if (!handle) return;
 
     console.log('Checking assignment status for problem:', problemId, 'for handle:', handle);
-    const res = await fetch(`http://localhost:8080/api/v1/dashboard/assignments/${handle}`);
+    const res = await fetch(apiV1Path(`dashboard/assignments/${handle}`));
     if (!res.ok) {
       console.warn('Failed to fetch assignments in background check:', res.status);
       return;
@@ -269,7 +270,7 @@ async function logHintUsage(data: any, response: any) {
     }
 
     const problemId = getProblemKey(data.url);
-    await fetch('http://localhost:8080/api/v1/tracking/hint', {
+    await fetch(apiV1Path('tracking/hint'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
