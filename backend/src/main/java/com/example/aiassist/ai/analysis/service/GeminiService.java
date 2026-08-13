@@ -31,6 +31,12 @@ public class GeminiService {
     @Value("${nvidia.model:nvidia/llama-3.1-nemotron-70b-instruct}")
     private String nvidiaModel;
 
+    @Value("${groq.api.key:none}")
+    private String groqApiKey;
+
+    @Value("${groq.model:llama-3.3-70b-specdec}")
+    private String groqModel;
+
     public String generateHint(
             String problem,
             String code,
@@ -52,6 +58,10 @@ public class GeminiService {
         } else if ("nemotron".equalsIgnoreCase(aiProvider)) {
             if (nvidiaApiKey == null || nvidiaApiKey.equals("none") || nvidiaApiKey.isBlank()) {
                 throw new BadRequestException("Nvidia API key is not configured");
+            }
+        } else if ("groq".equalsIgnoreCase(aiProvider)) {
+            if (groqApiKey == null || groqApiKey.equals("none") || groqApiKey.isBlank()) {
+                throw new BadRequestException("Groq API key is not configured");
             }
         }
 
@@ -108,6 +118,49 @@ public class GeminiService {
             } catch (Exception e) {
                 log.error("[NVIDIA ERROR] Exception details:", e);
                 throw new BadRequestException("Failed to communicate with Nvidia service: " + e.getMessage());
+            }
+        } else if ("groq".equalsIgnoreCase(aiProvider)) {
+            String url = "https://api.groq.com/openai/v1/chat/completions";
+
+            Map<String, Object> message = Map.of("role", "user", "content", prompt);
+            Map<String, Object> requestBody = Map.of(
+                    "model", groqModel,
+                    "messages", List.of(message),
+                    "temperature", 0.5,
+                    "max_tokens", 120
+            );
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(groqApiKey);
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+
+            try {
+                log.info("[GROQ] Sending request for model: {}", groqModel);
+                ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+                if (response.getBody() == null) {
+                    throw new BadRequestException("Empty response from Groq API");
+                }
+
+                List choices = (List) response.getBody().get("choices");
+                if (choices == null || choices.isEmpty()) {
+                    throw new BadRequestException("No choices returned from Groq API");
+                }
+                Map choice = (Map) choices.get(0);
+                Map msg = (Map) choice.get("message");
+                if (msg == null) {
+                    throw new BadRequestException("No message returned from Groq API");
+                }
+                Object content = msg.get("content");
+                if (content == null) {
+                    throw new BadRequestException("Groq API returned empty content");
+                }
+
+                return content.toString();
+            } catch (Exception e) {
+                log.error("[GROQ ERROR] Exception details:", e);
+                throw new BadRequestException("Failed to communicate with Groq service: " + e.getMessage());
             }
         } else {
             String url = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent?key=" + apiKey;
