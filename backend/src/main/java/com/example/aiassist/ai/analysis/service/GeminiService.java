@@ -34,7 +34,7 @@ public class GeminiService {
     @Value("${groq.api.key:none}")
     private String groqApiKey;
 
-    @Value("${groq.model:llama-3.3-70b-specdec}")
+    @Value("${groq.model:llama-3.3-70b-versatile}")
     private String groqModel;
 
     public String generateHint(
