@@ -18,6 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Service
+@Transactional
 public class TrackingService {
 
     private final StudentProfileRepository studentRepository;

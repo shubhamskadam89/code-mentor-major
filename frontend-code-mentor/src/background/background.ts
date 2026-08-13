@@ -310,7 +310,7 @@ function handleProblemCapture(data: any, tabId?: number) {
   });
 }
 
-function handleCodeUpdate(data: any, tabId?: number) {
+function handleCodeUpdate(data: any, tabId?: number, retryCount = 0) {
   // data should contain { sessionId, language, rawCode, signalVector, url, isManual }
   console.log('Code update captured:', data);
   rememberCodingTab(tabId, data?.url);
@@ -326,8 +326,38 @@ function handleCodeUpdate(data: any, tabId?: number) {
     const problemContextId = map[key];
 
     if (!problemContextId) {
-      console.warn('No problem context ID found for key:', key);
-      // Optional: Re-trigger capture if missing?
+      console.warn('No problem context ID found for key:', key, '— attempting to resolve context on-the-fly.');
+      const targetTabId = tabId ?? latestCodingTabId;
+      if (targetTabId) {
+        chrome.tabs.sendMessage(targetTabId, { type: 'GET_PROBLEM_DETAILS' }, (problemDetails) => {
+          if (chrome.runtime.lastError || !problemDetails) {
+            console.error('Failed to retrieve problem details from coding tab:', chrome.runtime.lastError);
+            return;
+          }
+          if (!problemDetails.title || !problemDetails.description) {
+            console.warn('Retrieved problem details are incomplete. Cannot establish context:', problemDetails);
+            return;
+          }
+          console.log('Successfully retrieved problem details on-the-fly, establishing context...');
+          apiService.detectProblem(problemDetails).then(response => {
+            console.log('Problem context established on-the-fly:', response.problemContextId);
+            chrome.storage.local.get(['problemContextMap'], (fresh) => {
+              const freshMap = fresh.problemContextMap || {};
+              freshMap[key] = response.problemContextId;
+              chrome.storage.local.set({ problemContextMap: freshMap }, () => {
+                if (retryCount < 2) {
+                  console.log('Retrying handleCodeUpdate with newly established context.');
+                  handleCodeUpdate(data, tabId, retryCount + 1);
+                }
+              });
+            });
+          }).catch(err => {
+            console.error('Failed to establish problem context on-the-fly:', err);
+          });
+        });
+      } else {
+        console.error('Cannot retrieve problem details: no tab ID available.');
+      }
       return;
     }
 
@@ -393,7 +423,7 @@ function handleCodeUpdate(data: any, tabId?: number) {
       console.error('Error in analyzeCode promise chain:', err);
 
       const errMsg = err?.message || '';
-      const isStaleContext = errMsg.includes('404') || errMsg.includes('400') || errMsg.includes('Problem context not found');
+      const isStaleContext = errMsg.includes('404') || errMsg.includes('Problem context not found');
 
       if (isStaleContext) {
         console.warn('[CodeMentor] Stale problemContextId detected for key:', key, '— clearing cache and re-detecting problem.');
