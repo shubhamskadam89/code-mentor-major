@@ -25,6 +25,7 @@ import {
 import navbarLight from '../../../assets/codementor-navbar-light.svg';
 import navbarDark from '../../../assets/codementor-navbar-dark.svg';
 import { useAuth } from '../../auth/context/AuthContext';
+import { isFeatureEnabled } from '../../../services/featureFlags';
 
 const THEME_KEY = 'app_theme';
 
@@ -49,6 +50,11 @@ export function PrivacyPolicyPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [activeSection, setActiveSection] = useState('section-1');
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    isFeatureEnabled('privacy-policy-page').then(setEnabled);
+  }, []);
 
   // Dark mode state management
   const [dark, setDark] = useState<boolean>(() => {
@@ -106,6 +112,40 @@ export function PrivacyPolicyPage() {
       element.scrollIntoView({ behavior: 'smooth' });
     }
   };
+
+  if (enabled === null) {
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center p-6 text-zinc-900 dark:text-zinc-100">
+        <div className="flex items-center gap-3 text-zinc-500">
+          <div className="h-6 w-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-sm font-medium">Checking feature availability...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!enabled) {
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center p-6 text-zinc-900 dark:text-zinc-100">
+        <div className="max-w-md w-full text-center space-y-4 p-8 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl">
+          <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto">
+            <Shield className="w-6 h-6" />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">Privacy Policy Coming Soon</h1>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Our team is finalizing the Privacy Policy documentation. Please check back shortly.
+          </p>
+          <button
+            onClick={() => navigate('/')}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to CodeMentor
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="cm-page-shell min-h-screen text-zinc-900 dark:text-zinc-100 font-sans selection:bg-blue-500/30 flex flex-col">
