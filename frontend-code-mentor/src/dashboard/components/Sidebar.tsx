@@ -17,7 +17,8 @@ import {
   ChevronUp,
   Settings,
   ArrowLeft,
-  BarChart2
+  BarChart2,
+  Shield
 } from 'lucide-react';
 import logoMark from '../../assets/codementor-logo.svg';
 import navbarLight from '../../assets/codementor-navbar-light.svg';
@@ -191,6 +192,24 @@ export function Sidebar({
             </div>
           )}
         </div>
+
+        {/* Privacy Policy */}
+        <NavLink
+          to="/privacy-policy"
+          title={collapsed ? 'Privacy Policy' : undefined}
+          className={({ isActive }) =>
+            `flex items-center w-full px-3 py-2 text-xs font-semibold rounded-lg transition-colors ${
+              collapsed ? 'justify-center' : 'space-x-3'
+            } ${
+              isActive
+                ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-500 font-bold'
+                : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800/60'
+            }`
+          }
+        >
+          <Shield className="w-4 h-4 shrink-0" />
+          {!collapsed && <span>Privacy Policy</span>}
+        </NavLink>
 
         {/* Logout */}
         <button

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Menu, Sun, Moon, LogOut, User, ChevronDown } from 'lucide-react';
+import { Menu, Sun, Moon, LogOut, User, ChevronDown, Shield } from 'lucide-react';
 import { useAuth } from '../../modules/auth/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -131,6 +131,18 @@ export function TopBar({
                 >
                   <User className="w-4 h-4" />
                   My Profile
+                </button>
+
+                {/* Privacy Policy */}
+                <button
+                  onClick={() => {
+                    setProfileOpen(false);
+                    navigate('/privacy-policy');
+                  }}
+                  className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                >
+                  <Shield className="w-4 h-4" />
+                  Privacy Policy
                 </button>
 
                 {/* Logout */}

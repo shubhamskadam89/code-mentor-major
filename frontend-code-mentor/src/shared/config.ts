@@ -33,10 +33,9 @@ export function apiV1Path(path: string) {
   return `${API_V1_BASE_URL}/${trimLeadingSlash(path)}`;
 }
 
-export function appUrl(hashPath = '') {
-  const normalizedHash = trimLeadingSlash(hashPath);
-  const hash = normalizedHash ? `#/${normalizedHash}` : '';
-  return APP_ORIGIN ? `${APP_ORIGIN}/${hash}` : `/${hash}`;
+export function appUrl(path = '') {
+  const normalizedPath = trimLeadingSlash(path);
+  return APP_ORIGIN ? `${APP_ORIGIN}/${normalizedPath}` : `/${normalizedPath}`;
 }
 
 export function websocketUrl(path = '/ws') {

@@ -132,13 +132,25 @@ const App: React.FC = () => {
         </div>
 
         {/* Action button */}
-        <button
-          onClick={handleSignInRedirect}
-          className="w-full py-3.5 bg-white hover:bg-zinc-100 text-zinc-950 rounded-xl font-bold transition active:scale-[0.98] shadow-md flex items-center justify-center space-x-2 text-sm"
-        >
-          <span>Sign In to Continue</span>
-          <ExternalLink className="w-4 h-4" />
-        </button>
+        <div className="w-full space-y-2">
+          <button
+            onClick={handleSignInRedirect}
+            className="w-full py-3.5 bg-white hover:bg-zinc-100 text-zinc-950 rounded-xl font-bold transition active:scale-[0.98] shadow-md flex items-center justify-center space-x-2 text-sm"
+          >
+            <span>Sign In to Continue</span>
+            <ExternalLink className="w-4 h-4" />
+          </button>
+          <div className="text-center">
+            <a
+              href={appUrl('privacy-policy')}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors"
+            >
+              Privacy Policy
+            </a>
+          </div>
+        </div>
       </div>
     );
   }
@@ -232,7 +244,18 @@ const App: React.FC = () => {
 
       {/* Footer */}
       <footer className="p-3 bg-zinc-900/30 border-t border-zinc-900 text-[9px] font-bold text-zinc-500 flex items-center justify-between shrink-0 z-10">
-        <span>v1.0.0</span>
+        <div className="flex items-center space-x-2">
+          <span>v1.0.0</span>
+          <span>•</span>
+          <a
+            href={appUrl('privacy-policy')}
+            target="_blank"
+            rel="noreferrer"
+            className="hover:text-zinc-300 transition-colors"
+          >
+            Privacy Policy
+          </a>
+        </div>
         <a
           href={appUrl(`${role}/dashboard`)}
           target="_blank"

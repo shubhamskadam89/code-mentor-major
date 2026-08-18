@@ -1,7 +1,10 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Mail, Lock, User as UserIcon, ArrowRight, Github, Code2 } from 'lucide-react'
 import { useAuth } from '../../modules/auth/context/AuthContext'
 import { apiPath, apiUrl } from '../../shared/config'
+import navbarLight from '../../assets/codementor-navbar-light.svg'
+import navbarDark from '../../assets/codementor-navbar-dark.svg'
 
 interface AuthScreensProps {
     onLoginSuccess: (handle: string, role: string) => void;
@@ -112,12 +115,9 @@ export function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
             {/* Left/Top Decor Section */}
             <div className="hidden lg:flex w-1/2 bg-zinc-900 dark:bg-zinc-900/50 p-12 flex-col justify-between relative overflow-hidden border-r border-zinc-200 dark:border-zinc-800">
                 <div className="relative z-10 w-full">
-                    <div className="flex items-center space-x-3 mb-16">
-                        <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-orange-500/20">
-                            🦊
-                        </div>
-                        <span className="font-extrabold text-3xl font-sans tracking-tight text-white">CodeMentor</span>
-                    </div>
+                    <Link to="/" className="inline-flex items-center mb-16 hover:opacity-90 transition" title="Back to Home">
+                        <img src={navbarDark} alt="CodeMentor" className="h-9 w-auto max-w-[200px]" />
+                    </Link>
 
                     <h1 className="text-5xl font-extrabold text-white leading-[1.1] mb-6">
                         Master your <br />
@@ -147,9 +147,10 @@ export function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
             <div className="w-full lg:w-1/2 flex items-center justify-center p-8 relative">
                 {/* Mobile Header visible only on small screens */}
                 <div className="absolute top-8 left-8 flex items-center space-x-2 lg:hidden">
-                    <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center text-white font-bold text-lg">
-                        🦊
-                    </div>
+                    <Link to="/" className="flex items-center">
+                        <img src={navbarLight} alt="CodeMentor" className="h-7 w-auto dark:hidden" />
+                        <img src={navbarDark} alt="CodeMentor" className="hidden h-7 w-auto dark:block" />
+                    </Link>
                 </div>
 
                 <div className="w-full max-w-md space-y-8">
@@ -290,6 +291,16 @@ export function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
                         >
                             {isLogin ? 'Sign up' : 'Log in'}
                         </button>
+                    </p>
+
+                    <p className="text-center text-xs text-zinc-500 dark:text-zinc-500 pt-2 border-t border-zinc-200/60 dark:border-zinc-800/60">
+                        By continuing, you agree to CodeMentor&apos;s{' '}
+                        <Link
+                            to="/privacy-policy"
+                            className="font-semibold text-zinc-700 dark:text-zinc-300 hover:text-orange-600 dark:hover:text-orange-400 underline transition-colors"
+                        >
+                            Privacy Policy
+                        </Link>
                     </p>
                 </div>
             </div>

@@ -93,6 +93,10 @@ class CodeCaptureService {
       } else if (msg?.type === 'HINT_UPDATE') {
         console.log('CONTENT SCRIPT: Received HINT_UPDATE');
         this.updateHints(msg.data);
+      } else if (msg?.type === 'GET_PROBLEM_DETAILS') {
+        console.log('CONTENT SCRIPT: Received GET_PROBLEM_DETAILS');
+        const problem = this.extractProblemDetails();
+        sendResponse(problem);
       }
     });
 
@@ -656,6 +660,15 @@ class CodeCaptureService {
       if (descElement) {
         description = descElement.textContent || '';
       }
+    } else if (window.location.hostname.includes('geeksforgeeks.org')) {
+      const descElement = document.querySelector('.problem-statement') ||
+        document.querySelector('#problem-statement') ||
+        document.querySelector('.problem-description-markdown') ||
+        document.querySelector('[class*="ProblemStatement"]');
+
+      if (descElement) {
+        description = descElement.textContent || '';
+      }
     }
 
     // Fallback: Basic description scraping
@@ -677,15 +690,26 @@ class CodeCaptureService {
     return problem;
   }
 
-  private extractAndSendProblem() {
+  private extractAndSendProblem(retryCount = 0) {
     const problem = this.extractProblemDetails();
-    // Only send if we have at least a title or valid platform
-    if (problem.platform !== 'unknown') {
+    const hasRealTitle = problem.title &&
+                         problem.title !== 'LeetCode Problem' &&
+                         problem.title !== 'GeeksforGeeks Problem' &&
+                         problem.title !== 'Unknown Problem';
+
+    // Verify that we have a valid non-empty description and title to avoid Spring validation error on backend
+    if (problem.platform !== 'unknown' && hasRealTitle && problem.description.trim()) {
       console.log('Detected problem, sending to background:', problem);
       chrome.runtime.sendMessage({
         type: 'CAPTURE_PROBLEM',
         data: problem
       });
+    } else {
+      console.log(`Problem details incomplete (Title: "${problem.title}", Description Length: ${problem.description?.length ?? 0}).`);
+      if (retryCount < 10) {
+        console.log(`Scheduling retry #${retryCount + 1} for problem extraction in 1.5s...`);
+        setTimeout(() => this.extractAndSendProblem(retryCount + 1), 1500);
+      }
     }
   }
 

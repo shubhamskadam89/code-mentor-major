@@ -146,6 +146,7 @@
 
   .dark .dark\:bg-zinc-900,
   .dark .dark\:bg-zinc-850 { background-color: var(--cm-card-dark) !important; }
+  .dark .dark\:bg-zinc-800 { background-color: #161F30 !important; }
 
   .dark .cm-nav-surface.dark\:bg-zinc-900,
   .dark .cm-nav-surface { background-color: var(--cm-nav-dark) !important; }
