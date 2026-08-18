@@ -3,20 +3,39 @@ const trimLeadingSlash = (value: string) => value.replace(/^\/+/, '');
 
 const readEnv = (key: 'VITE_API_BASE_URL' | 'VITE_APP_BASE_URL' | 'VITE_WS_BASE_URL') => {
   const value = import.meta.env[key];
-  return typeof value === 'string' ? trimTrailingSlash(value) : '';
+  return typeof value === 'string' && value.trim() ? trimTrailingSlash(value.trim()) : '';
 };
 
-const currentWebOrigin = () => {
-  if (typeof window === 'undefined') return '';
-  if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
-    return trimTrailingSlash(window.location.origin);
+const resolveApiOrigin = () => {
+  const envApi = readEnv('VITE_API_BASE_URL');
+  if (envApi) return envApi;
+
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'http://localhost:8080';
+    }
   }
-  return '';
+
+  return 'https://code-mentor.duckdns.org';
 };
 
-export const API_ORIGIN = readEnv('VITE_API_BASE_URL') || currentWebOrigin();
-export const APP_ORIGIN = readEnv('VITE_APP_BASE_URL') || currentWebOrigin();
-export const WS_ORIGIN = readEnv('VITE_WS_BASE_URL');
+const resolveAppOrigin = () => {
+  const envApp = readEnv('VITE_APP_BASE_URL');
+  if (envApp) return envApp;
+
+  if (typeof window !== 'undefined') {
+    if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+      return trimTrailingSlash(window.location.origin);
+    }
+  }
+
+  return 'https://code-mentor-major.vercel.app';
+};
+
+export const API_ORIGIN = resolveApiOrigin();
+export const APP_ORIGIN = resolveAppOrigin();
+export const WS_ORIGIN = readEnv('VITE_WS_BASE_URL') || API_ORIGIN.replace(/^http/, 'ws');
 
 export const API_BASE_URL = `${API_ORIGIN}/api`;
 export const API_V1_BASE_URL = `${API_BASE_URL}/v1`;
