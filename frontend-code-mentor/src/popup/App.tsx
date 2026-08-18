@@ -65,7 +65,7 @@ const App: React.FC = () => {
   }, []);
 
   const handleSignInRedirect = () => {
-    chrome.tabs.create({ url: appUrl() });
+    chrome.tabs.create({ url: appUrl('login') });
   };
 
   const handleOpenSidepanel = () => {

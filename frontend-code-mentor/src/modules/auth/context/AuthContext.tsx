@@ -119,6 +119,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await setStorageItem('user_role', role);
       await setStorageItem('codementor_token', sessionToken);
 
+      if (typeof window !== 'undefined') {
+        window.postMessage({ type: 'CODEMENTOR_AUTH_SYNC', token: sessionToken, email, handle, role }, '*');
+        window.dispatchEvent(new CustomEvent('codementor-auth-changed'));
+        window.dispatchEvent(new Event('storage'));
+      }
+
       setUser({ handle, email, role });
       setToken(sessionToken);
     } catch (err) {
@@ -129,6 +135,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     try {
       await clearStorageItems(['codementor_handle', 'codementor_email', 'user_role', 'codementor_token']);
+      if (typeof window !== 'undefined') {
+        window.postMessage({ type: 'CODEMENTOR_AUTH_SYNC', token: '', email: '', handle: '', role: 'student' }, '*');
+        window.dispatchEvent(new CustomEvent('codementor-auth-changed'));
+        window.dispatchEvent(new Event('storage'));
+      }
       setUser(null);
       setToken(null);
     } catch (err) {

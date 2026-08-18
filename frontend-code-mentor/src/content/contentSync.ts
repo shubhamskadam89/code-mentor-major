@@ -53,15 +53,29 @@ function syncExtensionToPage() {
 syncPageToExtension();
 syncExtensionToPage();
 
-// --- Watch page localStorage for auth changes and push to extension ---
+// --- Watch page events for auth changes and push to extension ---
 window.addEventListener('storage', (e: StorageEvent) => {
   if (e.key && (AUTH_KEYS as readonly string[]).includes(e.key)) {
     syncPageToExtension();
   }
 });
 
+window.addEventListener('codementor-auth-changed', syncPageToExtension);
+window.addEventListener('focus', syncPageToExtension);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    syncPageToExtension();
+  }
+});
+
+window.addEventListener('message', (event) => {
+  if (event.data?.type === 'CODEMENTOR_AUTH_SYNC') {
+    syncPageToExtension();
+  }
+});
+
 // Polling fallback — catches same-origin login that doesn't fire the storage event
-setInterval(syncPageToExtension, 2000);
+setInterval(syncPageToExtension, 1000);
 
 // --- Watch extension storage for auth changes and push to page ---
 chrome.storage.onChanged.addListener((changes) => {

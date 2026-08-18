@@ -29,7 +29,10 @@
     },
     {
       "matches": [
-        "http://localhost:3000/*",
+        "http://localhost/*",
+        "http://localhost:*/*",
+        "http://127.0.0.1/*",
+        "http://127.0.0.1:*/*",
         "https://app.codementor.com/*",
         "https://code-mentor-major.vercel.app/*",
         "https://*.vercel.app/*"
