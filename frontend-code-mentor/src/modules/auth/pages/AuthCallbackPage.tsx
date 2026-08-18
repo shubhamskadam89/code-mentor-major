@@ -21,29 +21,37 @@ export function AuthCallbackPage() {
 
   useEffect(() => {
     async function handleCallback() {
-      // Hash router puts everything in the hash, e.g. /#/auth/callback?token=...
-      // Extract search params from the hash portion after '?'
-      const hashPart = window.location.hash; // e.g. "#/auth/callback?token=abc&email=..."
-      const queryStart = hashPart.indexOf('?');
-      const searchString = queryStart !== -1 ? hashPart.substring(queryStart) : window.location.search;
+      // Check query params in window.location.search first, then fallback to hash
+      let searchString = window.location.search;
+      if (!searchString && window.location.hash.includes('?')) {
+        searchString = window.location.hash.substring(window.location.hash.indexOf('?'));
+      }
       const params = new URLSearchParams(searchString);
 
       const token = params.get('token');
       const email = params.get('email');
-      const urlHandle = params.get('handle');
-      const role  = (params.get('role')?.toLowerCase() ?? 'student') as 'student' | 'teacher';
+      const urlHandle = params.get('handle') || params.get('name');
+      const role = (params.get('role')?.toLowerCase() ?? 'student') as 'student' | 'teacher';
 
       // Handle OAuth errors
       const error = params.get('error');
       if (error) {
         console.error('[AuthCallback] OAuth error:', error);
-        navigate('/', { replace: true });
+        navigate('/login', { replace: true });
         return;
       }
 
       if (!token || !email) {
-        console.warn('[AuthCallback] No token/email in callback URL — redirecting home.');
-        navigate('/', { replace: true });
+        // Check if session is already stored
+        const storedToken = localStorage.getItem('codementor_token');
+        const storedRole = (localStorage.getItem('user_role')?.toLowerCase() ?? 'student') as 'student' | 'teacher';
+        if (storedToken) {
+          navigate(storedRole === 'teacher' ? '/teacher/dashboard' : '/student/dashboard', { replace: true });
+          return;
+        }
+
+        console.warn('[AuthCallback] No token/email in callback URL — redirecting to login.');
+        navigate('/login', { replace: true });
         return;
       }
 
@@ -53,26 +61,28 @@ export function AuthCallbackPage() {
       await login(handle, email, role, token);
 
       // 2. Also store explicitly so contentSync picks it up for the extension
-      await setStorageItem('codementor_token',  token);
-      await setStorageItem('codementor_email',  email);
+      await setStorageItem('codementor_token', token);
+      await setStorageItem('codementor_email', email);
       await setStorageItem('codementor_handle', handle);
-      await setStorageItem('user_role',         role);
+      await setStorageItem('user_role', role);
 
       // 3. Sync to chrome.storage.local if inside extension context
       if (typeof chrome !== 'undefined' && chrome?.storage?.local) {
         chrome.storage.local.set({ codementor_token: token, codementor_email: email, codementor_handle: handle, user_role: role });
       }
 
-      // 4. Clean up the URL
-      window.history.replaceState({}, document.title, window.location.pathname + '#/');
+      // 4. Target dashboard path
+      const targetDashboard = role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard';
 
-      // 5. Navigate to correct dashboard
-      navigate(role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard', { replace: true });
+      // 5. Clean up the URL in the address bar
+      window.history.replaceState({}, document.title, targetDashboard);
+
+      // 6. Navigate to correct dashboard
+      navigate(targetDashboard, { replace: true });
     }
 
     handleCallback();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [login, navigate]);
 
   // Show a brief loading spinner while processing
   return (

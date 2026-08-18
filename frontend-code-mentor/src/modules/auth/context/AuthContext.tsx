@@ -55,10 +55,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             });
           }
 
-          // Clear query params from the address bar, keeping the hash route intact
-          const hashWithoutQuery = window.location.hash.split('?')[0];
-          window.history.replaceState({}, document.title, window.location.pathname + (hashWithoutQuery || '#/'));
-
           setUser({ handle, email: urlEmail, role });
           setToken(urlToken);
           setLoading(false);
