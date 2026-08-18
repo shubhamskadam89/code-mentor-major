@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, HashRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../modules/auth/context/AuthContext';
-import { AuthScreens } from './components/AuthScreens';
 
 // Landing & Auth pages
 import { LandingPage } from '../modules/landing/pages/LandingPage';
@@ -68,15 +67,11 @@ function PrivateRoute({ children, requiredRole }: { children: React.ReactNode; r
     }
 
     if (!user) {
-        return (
-            <AuthScreens
-                onLoginSuccess={() => { /* AuthContext state update triggers re-render */ }}
-            />
-        );
+        return <Navigate to="/login" replace />;
     }
 
     if (user.role !== requiredRole) {
-        return <Navigate to={user.role === 'teacher' ? '/teacher' : '/student'} replace />;
+        return <Navigate to={user.role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard'} replace />;
     }
 
     return <>{children}</>;
